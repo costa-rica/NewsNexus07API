@@ -24,6 +24,7 @@ const {
   NewsArticleAggregatorSource,
   Article,
   EntityWhoFoundArticle,
+  NewsArticleAggregatorSourceStateContract,
 } = require("newsnexus05db");
 
 const { promisify } = require("util");
@@ -51,6 +52,7 @@ const models = {
   NewsArticleAggregatorSource,
   Article,
   EntityWhoFoundArticle,
+  NewsArticleAggregatorSourceStateContract,
 };
 
 async function readAndAppendDbTables(backupFolderPath) {

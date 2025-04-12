@@ -8,6 +8,8 @@ var logger = require("morgan");
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 var adminDbRouter = require("./routes/adminDb");
+var keywordsRouter = require("./routes/keywords");
+var gNewsRouter = require("./routes/gNews");
 
 var app = express();
 const cors = require("cors");
@@ -22,14 +24,20 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use("/admin-db", adminDbRouter);
+app.use("/keywords", keywordsRouter);
+app.use("/gnews", gNewsRouter);
 
-const { onStartUpCreateEnvUsers } = require("./modules/onStartUp");
+const {
+  onStartUpCreateEnvUsers,
+  verifyCheckDirectoryExists,
+} = require("./modules/onStartUp");
 // Sync database and start server
 sequelize
   .sync()
   .then(async () => {
     console.log("✅ Database connected & synced");
     await onStartUpCreateEnvUsers(); // <-- Call function here
+    verifyCheckDirectoryExists();
   })
   .catch((error) => console.error("Error syncing database:", error));
 

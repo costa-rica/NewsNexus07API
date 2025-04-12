@@ -19,6 +19,7 @@ const {
   NewsArticleAggregatorSource,
   Article,
   EntityWhoFoundArticle,
+  NewsArticleAggregatorSourceStateContract,
 } = require("newsnexus05db");
 
 const models = {
@@ -40,6 +41,7 @@ const models = {
   NewsArticleAggregatorSource,
   Article,
   EntityWhoFoundArticle,
+  NewsArticleAggregatorSourceStateContract,
 };
 
 const fs = require("fs");

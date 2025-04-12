@@ -23,4 +23,12 @@ router.post("/add-keyword", authenticateToken, async (req, res) => {
   res.json({ result: true });
 });
 
+// 🔹 GET /keywords: Get API
+router.get("/", authenticateToken, async (req, res) => {
+  const keywords = await Keywords.findAll({ where: { isArchived: false } });
+  // make an array of just the keywords
+  const keywordsArray = keywords.map((keyword) => keyword.keyword);
+  res.json({ keywordsArray });
+});
+
 module.exports = router;

@@ -29,6 +29,11 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
     isRss: isRss === "true",
   });
 
+  // Create EntityWhoFoundArticle record for the admin user
+  await EntityWhoFoundArticle.create({
+    newsArticleAggregatorSourceId: aggregator.id,
+  });
+
   res.json({ message: "Aggregator added successfully", aggregator });
 });
 

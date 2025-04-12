@@ -1,6 +1,7 @@
-const { User } = require("newsnexus05db");
+const { User, EntityWhoFoundArticle } = require("newsnexus05db");
 
 const bcrypt = require("bcrypt");
+const fs = require("fs");
 
 async function onStartUpCreateEnvUsers() {
   if (!process.env.ADMIN_EMAIL_CREATE_ON_STARTUP) {
@@ -35,6 +36,11 @@ async function onStartUpCreateEnvUsers() {
           isAdmin: true, // Set admin flag
         });
 
+        // Create EntityWhoFoundArticle record for the admin user
+        await EntityWhoFoundArticle.create({
+          userId: newUser.id,
+        });
+
         console.log(`✅ Admin user created: ${email}`);
       } else {
         console.log(`🔸 User already exists: ${email}`);
@@ -45,4 +51,11 @@ async function onStartUpCreateEnvUsers() {
   }
 }
 
-module.exports = { onStartUpCreateEnvUsers };
+function verifyCheckDirectoryExists() {
+  const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
+  if (!fs.existsSync(responseDir)) {
+    fs.mkdirSync(responseDir, { recursive: true });
+    console.log(`Created directory: ${responseDir}`);
+  }
+}
+module.exports = { onStartUpCreateEnvUsers, verifyCheckDirectoryExists };

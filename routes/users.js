@@ -1,6 +1,6 @@
 var express = require("express");
 var router = express.Router();
-const { User, NewsArticleAggregatorSource } = require("newsnexus05db");
+const { User, EntityWhoFoundArticle } = require("newsnexus05db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { checkBodyReturnMissing } = require("../modules/common");
@@ -35,6 +35,11 @@ router.post("/register", async (req, res) => {
     password: hashedPassword,
     email,
     created: new Date(),
+  });
+
+  // Create EntityWhoFoundArticle record for the admin user
+  await EntityWhoFoundArticle.create({
+    userId: user.id,
   });
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
