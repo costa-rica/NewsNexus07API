@@ -60,8 +60,34 @@ function writeRequestArgs(requestBody, fileNameSuffix) {
   }
 }
 
+function writeResponseDataFromNewsAggregator(
+  NewsArticleAggregatorSourceId,
+  keywordId,
+  requestResponseData,
+  prefix = false
+) {
+  const formattedDate = new Date()
+    .toISOString()
+    .split("T")[0]
+    .replace(/-/g, "");
+  const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
+  let responseFilename;
+  if (prefix) {
+    responseFilename = `failedToSave${formattedDate}apiId${NewsArticleAggregatorSourceId}keywordId${keywordId}.json`;
+  } else {
+    responseFilename = `${formattedDate}apiId${NewsArticleAggregatorSourceId}keywordId${keywordId}.json`;
+  }
+  const responseFilePath = path.join(responseDir, responseFilename);
+  fs.writeFileSync(
+    responseFilePath,
+    JSON.stringify(requestResponseData, null, 2),
+    "utf-8"
+  );
+}
+
 module.exports = {
   checkBody,
   checkBodyReturnMissing,
   writeRequestArgs,
+  writeResponseDataFromNewsAggregator,
 };

@@ -9,7 +9,9 @@ var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 var adminDbRouter = require("./routes/adminDb");
 var keywordsRouter = require("./routes/keywords");
-var gNewsRouter = require("./routes/gNews");
+var gNewsRouter = require("./routes/newsOrgs/gNews");
+var newsAggregatorsRouter = require("./routes/newsAggregators");
+var newsApiRouter = require("./routes/newsOrgs/newsApi");
 
 var app = express();
 const cors = require("cors");
@@ -26,6 +28,8 @@ app.use("/users", usersRouter);
 app.use("/admin-db", adminDbRouter);
 app.use("/keywords", keywordsRouter);
 app.use("/gnews", gNewsRouter);
+app.use("/news-aggregators", newsAggregatorsRouter);
+app.use("/news-api", newsApiRouter);
 
 const {
   onStartUpCreateEnvUsers,

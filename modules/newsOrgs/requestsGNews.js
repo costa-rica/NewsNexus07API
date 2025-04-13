@@ -9,9 +9,17 @@ const fs = require("fs");
 const path = require("path");
 
 // Make a single request to the API
-async function makeGNewsRequest(source, keyword, startDate = false, max = 10) {
+async function makeGNewsRequest(
+  source,
+  keyword,
+  startDate = false,
+  endDate = false,
+  max = 10
+) {
   const token = source.apiKey;
-  const endDate = new Date().toISOString().split("T")[0];
+  if (!endDate) {
+    endDate = new Date().toISOString().split("T")[0];
+  }
   if (!startDate) {
     // startDate should be 160 days prior to endDate
     startDate = new Date(
@@ -46,6 +54,7 @@ async function makeGNewsRequest(source, keyword, startDate = false, max = 10) {
   newsApiRequest = await NewsApiRequest.create({
     newsArticleAggregatorSourceId: source.id,
     keywordId: keyword.keywordId,
+    dateStartOfRequest: startDate,
     dateEndOfRequest: new Date(),
     countOfArticlesReceivedFromRequest: requestResponseData.articles.length,
   });
