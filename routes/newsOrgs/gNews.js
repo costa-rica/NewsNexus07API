@@ -7,7 +7,7 @@ const {
 const { checkBodyReturnMissing } = require("../../modules/common");
 const { NewsArticleAggregatorSource, Keywords } = require("newsnexus05db");
 
-// POST news-searches/request-gnews
+// POST /gnews/request
 router.post("/request", async (req, res) => {
   console.log("- starting request-gnews");
   try {
@@ -28,16 +28,18 @@ router.post("/request", async (req, res) => {
     // console.log(`- got correct body ${JSON.stringify(req.body)}`);
     const gNewsSourceObj = await NewsArticleAggregatorSource.findOne({
       where: { nameOfOrg: "GNews" },
+      raw: true, // Returns data without all the database gibberish
     });
     // console.log(gNewsSourceObj);
     const keywordObj = await Keywords.findOne({
       where: { keyword: keywordString },
+      raw: true, // Returns data without all the database gibberish
     });
     const keywordObjModified = { ...keywordObj, keywordId: keywordObj.id };
     // console.log(keywordObj);
     // // 2. make request
     // console.log(`- making request`);
-    const { requestResponseData, newsApiRequest } = await makeGNewsRequest(
+    const { requestResponseData, newsApiRequestObj } = await makeGNewsRequest(
       gNewsSourceObj,
       keywordObjModified,
       startDate,
@@ -45,11 +47,22 @@ router.post("/request", async (req, res) => {
       max
     );
 
+    if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+      return res.status(200).json({
+        result: true,
+        newsApiRequestObj,
+      });
+    } else {
+      console.log(
+        `what is process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES: ${process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES}`
+      );
+    }
+
     // // 3 save articles to db
     // console.log(`- saving articles`);
     await storeGNewsArticles(
       requestResponseData,
-      newsApiRequest,
+      newsApiRequestObj,
       keywordObjModified
     );
 

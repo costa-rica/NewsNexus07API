@@ -30,10 +30,12 @@ router.post("/request", async (req, res) => {
     // Step 1: find NewsArticleAggregatorSource
     const newsApiSourceObj = await NewsArticleAggregatorSource.findOne({
       where: { nameOfOrg: "NewsAPI" },
+      raw: true, // Returns data without all the database gibberish
     });
     // Step 2: create Keyword obj
     const keywordObj = await Keywords.findOne({
       where: { keyword: keywordString },
+      raw: true, // Returns data without all the database gibberish
     });
     const keywordObjModified = { ...keywordObj, keywordId: keywordObj.id };
     // Step 3: make request
@@ -44,6 +46,12 @@ router.post("/request", async (req, res) => {
       endDate,
       max
     );
+    if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+      return res.status(200).json({
+        result: true,
+        newsApiRequest,
+      });
+    }
 
     if (requestResponseData.status === "error") {
       return res.status(400).json({

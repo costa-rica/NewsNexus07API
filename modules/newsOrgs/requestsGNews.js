@@ -36,8 +36,13 @@ async function makeGNewsRequest(
     keyword.keyword
   )}&from=${startDate}&to=${endDate}&max=${max}&lang=en&token=${token}`;
 
+  console.log("- urlGnews :  ", urlGnews);
+  if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+    return { requestResponseData: null, newsApiRequestObj: urlGnews };
+  }
+
   let requestResponseData;
-  let newsApiRequest;
+  let newsApiRequestObj;
 
   // if (process.env.NODE_ENV_SENDING_API_REQUESTS === "true") {
   // console.log("---> WRONG if for testing");
@@ -51,7 +56,7 @@ async function makeGNewsRequest(
   );
 
   // create new NewsApiRequest
-  newsApiRequest = await NewsApiRequest.create({
+  newsApiRequestObj = await NewsApiRequest.create({
     newsArticleAggregatorSourceId: source.id,
     keywordId: keyword.keywordId,
     dateStartOfRequest: startDate,
@@ -76,7 +81,7 @@ async function makeGNewsRequest(
   //   });
   // }
 
-  return { requestResponseData, newsApiRequest };
+  return { requestResponseData, newsApiRequestObj };
 }
 
 // Store the articles of a single request in Aritcle and update NewsApiRequest
