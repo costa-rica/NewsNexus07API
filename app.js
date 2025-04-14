@@ -12,7 +12,8 @@ var keywordsRouter = require("./routes/keywords");
 var gNewsRouter = require("./routes/newsOrgs/gNews");
 var newsAggregatorsRouter = require("./routes/newsAggregators");
 var newsApiRouter = require("./routes/newsOrgs/newsApi");
-
+var articlesRouter = require("./routes/articles");
+var statesRouter = require("./routes/state");
 var app = express();
 const cors = require("cors");
 app.use(cors());
@@ -30,6 +31,8 @@ app.use("/keywords", keywordsRouter);
 app.use("/gnews", gNewsRouter);
 app.use("/news-aggregators", newsAggregatorsRouter);
 app.use("/news-api", newsApiRouter);
+app.use("/articles", articlesRouter);
+app.use("/states", statesRouter);
 
 const {
   onStartUpCreateEnvUsers,

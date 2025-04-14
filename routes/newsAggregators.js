@@ -63,6 +63,7 @@ router.get("/requests", authenticateToken, async (req, res) => {
       startDate: request.dateStartOfRequest,
       endDate: request.dateEndOfRequest,
       count: request.countOfArticlesReceivedFromRequest,
+      countSaved: request.countOfArticlesSavedToDbFromRequest,
       status: request.status,
     });
   }
