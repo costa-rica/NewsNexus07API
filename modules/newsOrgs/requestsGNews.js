@@ -30,7 +30,7 @@ async function makeGNewsRequest(
       .toISOString()
       .split("T")[0];
   }
-  console.log(`keyword is ${JSON.stringify(keyword)}`);
+  // console.log(`keyword is ${JSON.stringify(keyword)}`);
 
   const urlGnews = `${source.url}search?q=${encodeURIComponent(
     keyword.keyword

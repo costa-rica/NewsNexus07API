@@ -9,7 +9,7 @@ const { NewsArticleAggregatorSource, Keywords } = require("newsnexus05db");
 
 // POST /gnews/request
 router.post("/request", async (req, res) => {
-  console.log("- starting request-gnews");
+  // console.log("- starting request-gnews");
   try {
     const { startDate, endDate, keywordString, max } = req.body;
 

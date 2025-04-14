@@ -41,7 +41,7 @@ async function makeNewsApiRequest(source, keyword, startDate, endDate, max) {
   const response = await fetch(urlNewsApi);
   const requestResponseData = await response.json();
 
-  console.log("- requestResponseData.articles", requestResponseData.articles);
+  // console.log("- requestResponseData.articles", requestResponseData.articles);
 
   let status = "success";
   if (!requestResponseData.articles) {
