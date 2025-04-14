@@ -24,6 +24,11 @@ router.post("/:articleId", authenticateToken, async (req, res) => {
     return res.status(400).json({ error: `Missing ${missingKeys.join(", ")}` });
   }
 
+  // delete any ArticleStateContract records for this articleId
+  await ArticleStateContract.destroy({
+    where: { articleId: articleId },
+  });
+
   const articleStateContracts = stateIdArray.map((stateId) => {
     return {
       articleId: articleId,
@@ -32,9 +37,6 @@ router.post("/:articleId", authenticateToken, async (req, res) => {
   });
 
   await ArticleStateContract.bulkCreate(articleStateContracts);
-  console.log(
-    `articleStateContracts: ${JSON.stringify(articleStateContracts)}`
-  );
   res.json({ result: true, articleStateContracts });
 });
 
