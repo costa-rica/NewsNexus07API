@@ -46,12 +46,12 @@ router.post("/request", async (req, res) => {
       endDate,
       max
     );
-    if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
-      return res.status(200).json({
-        result: true,
-        newsApiRequest,
-      });
-    }
+    // if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+    //   return res.status(200).json({
+    //     result: true,
+    //     newsApiRequest,
+    //   });
+    // }
 
     if (requestResponseData.status === "error") {
       return res.status(400).json({

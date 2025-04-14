@@ -47,16 +47,16 @@ router.post("/request", async (req, res) => {
       max
     );
 
-    if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
-      return res.status(200).json({
-        result: true,
-        newsApiRequestObj,
-      });
-    } else {
-      console.log(
-        `what is process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES: ${process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES}`
-      );
-    }
+    // if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+    //   return res.status(200).json({
+    //     result: true,
+    //     newsApiRequestObj,
+    //   });
+    // } else {
+    //   console.log(
+    //     `what is process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES: ${process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES}`
+    //   );
+    // }
 
     // // 3 save articles to db
     // console.log(`- saving articles`);

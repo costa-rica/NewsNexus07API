@@ -36,10 +36,10 @@ async function makeGNewsRequest(
     keyword.keyword
   )}&from=${startDate}&to=${endDate}&max=${max}&lang=en&token=${token}`;
 
-  console.log("- urlGnews :  ", urlGnews);
-  if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
-    return { requestResponseData: null, newsApiRequestObj: urlGnews };
-  }
+  // console.log("- urlGnews :  ", urlGnews);
+  // if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+  //   return { requestResponseData: null, newsApiRequestObj: urlGnews };
+  // }
 
   let requestResponseData;
   let newsApiRequestObj;

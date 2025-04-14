@@ -33,10 +33,10 @@ async function makeNewsApiRequest(source, keyword, startDate, endDate, max) {
     keyword.keyword
   )}&from=${startDate}&to=${endDate}&pageSize=${max}&language=en&apiKey=${token}`;
 
-  console.log("- urlNewsApi :  ", urlNewsApi);
-  if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
-    return { requestResponseData: null, newsApiRequest: urlNewsApi };
-  }
+  // console.log("- urlNewsApi :  ", urlNewsApi);
+  // if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
+  //   return { requestResponseData: null, newsApiRequest: urlNewsApi };
+  // }
   // Step 3: send request
   const response = await fetch(urlNewsApi);
   const requestResponseData = await response.json();
