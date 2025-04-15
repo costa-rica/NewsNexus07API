@@ -43,15 +43,8 @@ router.post("/register", async (req, res) => {
   });
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
-  // const token = jwt.sign({ user }, process.env.JWT_SECRET);
 
-  // await sendRegistrationEmail(email, username)
-  //   .then(() => console.log("Email sent successfully"))
-  //   .catch((error) => console.error("Email failed:", error));
-
-  res
-    .status(201)
-    .json({ message: "Utilisateur créé avec succès.", user, token });
+  res.status(201).json({ message: "User created successfully", token });
 });
 
 // 🔹 Login User (Read)
@@ -77,7 +70,7 @@ router.post("/login", async (req, res) => {
   }
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
-  res.json({ message: "Utilisateur connecté avec succès.", user, token });
+  res.json({ message: "User logged in successfully", token });
 });
 
 // 🔹 Send reset token POST /users/request-password-reset

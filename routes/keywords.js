@@ -25,7 +25,10 @@ router.post("/add-keyword", authenticateToken, async (req, res) => {
 
 // 🔹 GET /keywords: Get API
 router.get("/", authenticateToken, async (req, res) => {
-  const keywords = await Keywords.findAll({ where: { isArchived: false } });
+  const keywords = await Keywords.findAll({
+    where: { isArchived: false },
+  });
+  // const keywords = await Keywords.findAll();
   // make an array of just the keywords
   const keywordsArray = keywords.map((keyword) => keyword.keyword);
   res.json({ keywordsArray });

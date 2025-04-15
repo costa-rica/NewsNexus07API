@@ -25,6 +25,7 @@ const {
   Article,
   EntityWhoFoundArticle,
   NewsArticleAggregatorSourceStateContract,
+  ArticleIsRelevant,
 } = require("newsnexus05db");
 
 const { promisify } = require("util");
@@ -53,6 +54,7 @@ const models = {
   Article,
   EntityWhoFoundArticle,
   NewsArticleAggregatorSourceStateContract,
+  ArticleIsRelevant,
 };
 
 async function readAndAppendDbTables(backupFolderPath) {
@@ -73,11 +75,6 @@ async function readAndAppendDbTables(backupFolderPath) {
     });
 
     console.log(`Append Batch 1 (First): ${appendBatch1}`);
-    // console.log(
-    //   `Append Batch 2 (Second - Contract, Match, Video): ${appendBatch2}`
-    // );
-    // console.log(`Append Batch 3 (Third - Action): ${appendBatch3}`);
-    // console.log(`Append Batch 4 (Last - SyncContract): ${appendBatch4}`);
 
     // Helper function to process CSV files
     async function processCSVFiles(files) {
@@ -100,6 +97,12 @@ async function readAndAppendDbTables(backupFolderPath) {
           fs.createReadStream(filePath)
             .pipe(csvParser())
             .on("data", (row) => records.push(row))
+            // .on("data", (row) => {
+            //   if (file === "Keywords.csv" && "isArchived" in row) {
+            //     convertIsArchivedNotOneToFalse(row);
+            //   }
+            //   records.push(row);
+            // })
             .on("end", resolve)
             .on("error", reject);
         });
@@ -201,6 +204,14 @@ async function createDatabaseBackupZipFile(suffix = "") {
   } catch (error) {
     console.error("Error creating database backup:", error);
     throw error;
+  }
+}
+
+function convertIsArchivedNotOneToFalse(row) {
+  if (row["isArchived"] !== "1") {
+    row["isArchived"] = false;
+  } else if (typeof row["isArchived"] === "string") {
+    row["isArchived"] = row["isArchived"].toLowerCase() === "true";
   }
 }
 
