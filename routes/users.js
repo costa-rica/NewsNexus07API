@@ -44,7 +44,13 @@ router.post("/register", async (req, res) => {
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
 
-  res.status(201).json({ message: "User created successfully", token });
+  res
+    .status(201)
+    .json({
+      message: "User created successfully",
+      token,
+      user: { username: user.username, email: user.email },
+    });
 });
 
 // 🔹 Login User (Read)
@@ -70,7 +76,12 @@ router.post("/login", async (req, res) => {
   }
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
-  res.json({ message: "User logged in successfully", token });
+  res.json({
+    message: "User logged in successfully",
+    token,
+    user: { username: user.username, email: user.email },
+  });
+  // res.status(500).json({ error: "Testing this error" });
 });
 
 // 🔹 Send reset token POST /users/request-password-reset
