@@ -4,12 +4,12 @@ const {
   NewsArticleAggregatorSource,
   NewsApiRequest,
   EntityWhoFoundArticle,
-  Keywords,
+  Keyword,
 } = require("newsnexus05db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 
-// 🔹 Add API POST /news-aggregators/add-aggregator
+// 🔹 POST /news-aggregators/add-aggregator
 router.post("/add-aggregator", authenticateToken, async (req, res) => {
   const { nameOfOrg, url, apiKey, state, isApi, isRss } = req.body;
   const { isValid, missingKeys } = checkBodyReturnMissing(req.body, ["url"]);
@@ -41,11 +41,11 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
 
   res.json({ message: "Aggregator added successfully", aggregator });
 });
-// 🔹 Add API GET /news-aggregators/requests
+// 🔹 GET /news-aggregators/requests: this sends the list of all the requests the Portal "Get Articles page"
 router.get("/requests", authenticateToken, async (req, res) => {
   // console.log("- starting /requests");
   const newsApiRequestsArray = await NewsApiRequest.findAll({
-    include: [{ model: NewsArticleAggregatorSource, Keywords }],
+    include: [{ model: NewsArticleAggregatorSource, Keyword }],
   });
   // console.log(JSON.stringify(newsApiRequestsArray, null, 2));
   const arrayForTable = [];
@@ -53,7 +53,7 @@ router.get("/requests", authenticateToken, async (req, res) => {
     if (!request.keywordId) {
       continue;
     }
-    const keywordObj = await Keywords.findByPk(request.keywordId);
+    const keywordObj = await Keyword.findByPk(request.keywordId);
     const keyword = keywordObj ? keywordObj.keyword : "Unknown";
 
     arrayForTable.push({
@@ -70,7 +70,7 @@ router.get("/requests", authenticateToken, async (req, res) => {
 
   res.json({ newsApiRequestsArray: arrayForTable });
 });
-// 🔹 Add API GET /news-aggregators/news-org-apis: returns array of news aggregators
+// 🔹 GET /news-aggregators/news-org-apis: returns array of news aggregators
 router.get("/news-org-apis", authenticateToken, async (req, res) => {
   const aggregatorsDbObjArray = await NewsArticleAggregatorSource.findAll({
     where: { isApi: true },

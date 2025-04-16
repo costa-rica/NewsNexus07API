@@ -1,6 +1,6 @@
 var express = require("express");
 var router = express.Router();
-const { Keywords } = require("newsnexus05db");
+const { Keyword } = require("newsnexus05db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 
@@ -15,7 +15,7 @@ router.post("/add-keyword", authenticateToken, async (req, res) => {
     return res.status(400).json({ error: `Missing ${missingKeys.join(", ")}` });
   }
 
-  const newKeyword = await Keywords.create({
+  const newKeyword = await Keyword.create({
     keyword: keyword,
     category: category,
   });
@@ -25,10 +25,10 @@ router.post("/add-keyword", authenticateToken, async (req, res) => {
 
 // 🔹 GET /keywords: Get API
 router.get("/", authenticateToken, async (req, res) => {
-  const keywords = await Keywords.findAll({
+  const keywords = await Keyword.findAll({
     where: { isArchived: false },
   });
-  // const keywords = await Keywords.findAll();
+  // const keywords = await Keyword.findAll();
   // make an array of just the keywords
   const keywordsArray = keywords.map((keyword) => keyword.keyword);
   res.json({ keywordsArray });

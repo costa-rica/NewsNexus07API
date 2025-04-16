@@ -30,30 +30,18 @@ async function makeGNewsRequest(
       .toISOString()
       .split("T")[0];
   }
-  // console.log(`keyword is ${JSON.stringify(keyword)}`);
 
   const urlGnews = `${source.url}search?q=${encodeURIComponent(
     keyword.keyword
   )}&from=${startDate}&to=${endDate}&max=${max}&lang=en&token=${token}`;
 
-  // console.log("- urlGnews :  ", urlGnews);
-  // if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
-  //   return { requestResponseData: null, newsApiRequestObj: urlGnews };
-  // }
-
   let requestResponseData;
   let newsApiRequestObj;
 
-  // if (process.env.NODE_ENV_SENDING_API_REQUESTS === "true") {
-  // console.log("---> WRONG if for testing");
   const requestResponse = await fetch(urlGnews);
   requestResponseData = await requestResponse.json();
-  // console.log("- requestResponseData", requestResponseData);
-  console.log(urlGnews);
 
-  console.log(
-    `- data for create: ${source.id}, ${keyword.keywordId}, ${requestResponseData.articles.length}`
-  );
+  console.log(urlGnews);
 
   // create new NewsApiRequest
   newsApiRequestObj = await NewsApiRequest.create({
@@ -63,23 +51,6 @@ async function makeGNewsRequest(
     dateEndOfRequest: new Date(),
     countOfArticlesReceivedFromRequest: requestResponseData.articles.length,
   });
-  // } else {
-  //   // load test response
-  //   const responseFile = path.join(
-  //     process.env.PATH_TEST_RESPONSE_GNEWS,
-  //     "20250323-134522.json"
-  //   );
-  //   const fileContent = fs.readFileSync(responseFile, "utf-8");
-  //   requestResponseData = JSON.parse(fileContent);
-  //   console.log(`opening: ${responseFile}`);
-  //   // create new NewsApiRequest
-  //   newsApiRequest = await NewsApiRequest.create({
-  //     newsArticleAggregatorSourceId: source.id,
-  //     keywordId: keyword.keywordId,
-  //     dateEndOfRequest: new Date("2025-03-23T00:00:00.000Z"), // create date from filename
-  //     countOfArticlesReceivedFromRequest: requestResponseData.articles.length,
-  //   });
-  // }
 
   return { requestResponseData, newsApiRequestObj };
 }
@@ -117,6 +88,7 @@ async function storeGNewsArticles(
         urlToImage: article.image,
         publishedDate: article.publishedAt,
         entityWhoFoundArticleId: entityWhoFoundArticleId,
+        newsApiRequestId: newsApiRequest.id,
       });
       countOfArticlesSavedToDbFromRequest++;
     }

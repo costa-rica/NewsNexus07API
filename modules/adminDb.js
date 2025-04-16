@@ -20,7 +20,7 @@ const {
   NewsApiRequest,
   ArticleContent,
   NewsRssRequest,
-  Keywords,
+  Keyword,
   NewsArticleAggregatorSource,
   Article,
   EntityWhoFoundArticle,
@@ -49,7 +49,7 @@ const models = {
   NewsApiRequest,
   ArticleContent,
   NewsRssRequest,
-  Keywords,
+  Keyword,
   NewsArticleAggregatorSource,
   Article,
   EntityWhoFoundArticle,
@@ -98,7 +98,7 @@ async function readAndAppendDbTables(backupFolderPath) {
             .pipe(csvParser())
             .on("data", (row) => records.push(row))
             // .on("data", (row) => {
-            //   if (file === "Keywords.csv" && "isArchived" in row) {
+            //   if (file === "Keyword.csv" && "isArchived" in row) {
             //     convertIsArchivedNotOneToFalse(row);
             //   }
             //   records.push(row);

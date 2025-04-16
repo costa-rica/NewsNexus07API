@@ -101,6 +101,7 @@ async function storeNewsApiArticles(
         urlToImage: article.urlToImage,
         publishedDate: article.publishedAt,
         entityWhoFoundArticleId: entityWhoFoundArticleId,
+        newsApiRequestId: newsApiRequest.id,
       });
 
       // Append ArticleContent

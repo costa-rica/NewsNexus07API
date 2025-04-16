@@ -2,7 +2,7 @@ var express = require("express");
 var router = express.Router();
 
 const { checkBodyReturnMissing } = require("../../modules/common");
-const { NewsArticleAggregatorSource, Keywords } = require("newsnexus05db");
+const { NewsArticleAggregatorSource, Keyword } = require("newsnexus05db");
 const {
   makeNewsApiRequest,
   storeNewsApiArticles,
@@ -33,7 +33,7 @@ router.post("/request", async (req, res) => {
       raw: true, // Returns data without all the database gibberish
     });
     // Step 2: create Keyword obj
-    const keywordObj = await Keywords.findOne({
+    const keywordObj = await Keyword.findOne({
       where: { keyword: keywordString },
       raw: true, // Returns data without all the database gibberish
     });

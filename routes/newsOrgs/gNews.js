@@ -5,7 +5,7 @@ const {
   storeGNewsArticles,
 } = require("../../modules/newsOrgs/requestsGNews");
 const { checkBodyReturnMissing } = require("../../modules/common");
-const { NewsArticleAggregatorSource, Keywords } = require("newsnexus05db");
+const { NewsArticleAggregatorSource, Keyword } = require("newsnexus05db");
 
 // POST /gnews/request
 router.post("/request", async (req, res) => {
@@ -31,7 +31,7 @@ router.post("/request", async (req, res) => {
       raw: true, // Returns data without all the database gibberish
     });
     // console.log(gNewsSourceObj);
-    const keywordObj = await Keywords.findOne({
+    const keywordObj = await Keyword.findOne({
       where: { keyword: keywordString },
       raw: true, // Returns data without all the database gibberish
     });

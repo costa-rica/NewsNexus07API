@@ -5,6 +5,8 @@ const {
   State,
   ArticleIsRelevant,
   ArticleApproved,
+  NewsApiRequest,
+  Keyword,
 } = require("newsnexus05db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
@@ -23,6 +25,10 @@ router.get("/", authenticateToken, async (req, res) => {
       {
         model: ArticleApproved,
       },
+      {
+        model: NewsApiRequest,
+        include: [Keyword],
+      },
     ],
   });
 
@@ -38,11 +44,13 @@ router.get("/", authenticateToken, async (req, res) => {
     const isApproved =
       article.ArticleApproveds &&
       article.ArticleApproveds.some((entry) => entry.userId !== null);
+    const keyword = article.NewsApiRequest?.Keyword?.keyword || null;
     return {
       ...article.dataValues,
       states,
       isRelevant,
       isApproved,
+      keyword,
     };
   });
 
