@@ -21,6 +21,8 @@ const {
   EntityWhoFoundArticle,
   NewsArticleAggregatorSourceStateContract,
   ArticleIsRelevant,
+  NewsApiRequestWebsiteDomainContract,
+  WebsiteDomain,
 } = require("newsnexus05db");
 
 const models = {
@@ -44,6 +46,8 @@ const models = {
   EntityWhoFoundArticle,
   NewsArticleAggregatorSourceStateContract,
   ArticleIsRelevant,
+  NewsApiRequestWebsiteDomainContract,
+  WebsiteDomain,
 };
 
 const fs = require("fs");

@@ -13,6 +13,7 @@ const { authenticateToken } = require("../modules/userAuthentication");
 
 // 🔹 GET /articles: all articles
 router.get("/", authenticateToken, async (req, res) => {
+  console.log("- GET /articles");
   const articlesArray = await Article.findAll({
     include: [
       {
@@ -32,6 +33,7 @@ router.get("/", authenticateToken, async (req, res) => {
     ],
   });
 
+  console.log("- articlesArray.length: ", articlesArray.length);
   // make an array of just the articles
   const articlesArrayModified = articlesArray.map((article) => {
     // create states string
@@ -44,7 +46,21 @@ router.get("/", authenticateToken, async (req, res) => {
     const isApproved =
       article.ArticleApproveds &&
       article.ArticleApproveds.some((entry) => entry.userId !== null);
-    const keyword = article.NewsApiRequest?.Keyword?.keyword || null;
+    let keyword = article.NewsApiRequest?.Keyword?.keyword || null;
+    if (!keyword) {
+      let keywordString = "";
+      if (article.NewsApiRequest?.andString) {
+        keywordString = `AND ${article.NewsApiRequest?.andString}`;
+      }
+      if (article.NewsApiRequest?.orString) {
+        keywordString += ` OR ${article.NewsApiRequest?.orString}`;
+      }
+      if (article.NewsApiRequest?.notString) {
+        keywordString += ` NOT ${article.NewsApiRequest?.notString}`;
+      }
+      keyword = keywordString;
+    }
+
     return {
       ...article.dataValues,
       states,
@@ -53,7 +69,10 @@ router.get("/", authenticateToken, async (req, res) => {
       keyword,
     };
   });
-
+  console.log(
+    "- returning articlesArrayModified.length: ",
+    articlesArrayModified.length
+  );
   res.json({ articlesArray: articlesArrayModified });
 });
 

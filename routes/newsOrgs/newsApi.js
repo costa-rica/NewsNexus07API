@@ -6,9 +6,10 @@ const { NewsArticleAggregatorSource, Keyword } = require("newsnexus05db");
 const {
   makeNewsApiRequest,
   storeNewsApiArticles,
+  makeNewsApiRequestDetailed,
 } = require("../../modules/newsOrgs/requestsNewsApi");
 
-// POST news-api/request
+// 🔹 POST news-api/request
 router.post("/request", async (req, res) => {
   console.log("- starting request news-api");
   try {
@@ -79,6 +80,64 @@ router.post("/request", async (req, res) => {
       error: error.message,
     });
   }
+});
+
+// 🔹 POST /news-api/detailed-news-api
+router.post("/detailed-news-api", async (req, res) => {
+  const {
+    startDate,
+    endDate,
+    includeWebsiteDomainObjArray,
+    excludeWebsiteDomainObjArray,
+    keywordsAnd,
+    keywordsOr,
+    keywordsNot,
+  } = req.body;
+  // NOTE: andArray, orArray, notArray can include exact phrases i.e. "" or not ""
+
+  // Step 1: find NewsArticleAggregatorSource
+  const newsApiSourceObj = await NewsArticleAggregatorSource.findOne({
+    where: { nameOfOrg: "NewsAPI" },
+    raw: true, // Returns data without all the database gibberish
+  });
+
+  const { requestResponseData, newsApiRequest } =
+    await makeNewsApiRequestDetailed(
+      newsApiSourceObj,
+      startDate,
+      endDate,
+      includeWebsiteDomainObjArray,
+      excludeWebsiteDomainObjArray,
+      keywordsAnd,
+      keywordsOr,
+      keywordsNot
+    );
+
+  if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "true") {
+    if (requestResponseData.articles) {
+      console.log("- articles count: ", requestResponseData.articles.length);
+      // Step 4: store articles to db
+      await storeNewsApiArticles(requestResponseData, newsApiRequest, null);
+    } else {
+      console.log("--- > there was no articles element in the response ???/");
+      return res.status(400).json({
+        status: requestResponseData?.status || "error",
+        result: false,
+        message: requestResponseData?.message || "Failed to fetch articles",
+      });
+    }
+  }
+
+  // res.status(400).json({
+  //   status: requestResponseData?.status || "error",
+  //   result: false,
+  //   message: newsApiRequest,
+  // });
+  res.json({
+    result: true,
+    requestResponseData,
+    newsApiRequest,
+  });
 });
 
 module.exports = router;

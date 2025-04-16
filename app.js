@@ -14,6 +14,8 @@ var newsAggregatorsRouter = require("./routes/newsAggregators");
 var newsApiRouter = require("./routes/newsOrgs/newsApi");
 var articlesRouter = require("./routes/articles");
 var statesRouter = require("./routes/state");
+var websiteDomainsRouter = require("./routes/websiteDomains");
+
 var app = express();
 const cors = require("cors");
 app.use(cors());
@@ -33,6 +35,7 @@ app.use("/news-aggregators", newsAggregatorsRouter);
 app.use("/news-api", newsApiRouter);
 app.use("/articles", articlesRouter);
 app.use("/states", statesRouter);
+app.use("/website-domains", websiteDomainsRouter);
 
 const {
   onStartUpCreateEnvUsers,

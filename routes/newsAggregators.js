@@ -43,18 +43,30 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
 });
 // 🔹 GET /news-aggregators/requests: this sends the list of all the requests the Portal "Get Articles page"
 router.get("/requests", authenticateToken, async (req, res) => {
-  // console.log("- starting /requests");
+  console.log("- starting /requests");
   const newsApiRequestsArray = await NewsApiRequest.findAll({
     include: [{ model: NewsArticleAggregatorSource, Keyword }],
   });
-  // console.log(JSON.stringify(newsApiRequestsArray, null, 2));
+  console.log(`- newsApiRequestsArray.length: ${newsApiRequestsArray.length}`);
   const arrayForTable = [];
   for (let request of newsApiRequestsArray) {
-    if (!request.keywordId) {
-      continue;
+    let keyword = "";
+    if (request.keywordId) {
+      const keywordObj = await Keyword.findByPk(request.keywordId);
+      keyword = keywordObj ? keywordObj.keyword : "Unknown";
+    } else {
+      let keywordString = "";
+      if (request.andString) {
+        keywordString = `AND ${request.andString}`;
+      }
+      if (request.orString) {
+        keywordString += ` OR ${request.orString}`;
+      }
+      if (request.notString) {
+        keywordString += ` NOT ${request.notString}`;
+      }
+      keyword = keywordString;
     }
-    const keywordObj = await Keyword.findByPk(request.keywordId);
-    const keyword = keywordObj ? keywordObj.keyword : "Unknown";
 
     arrayForTable.push({
       madeOn: request.dateEndOfRequest,
@@ -65,8 +77,12 @@ router.get("/requests", authenticateToken, async (req, res) => {
       count: request.countOfArticlesReceivedFromRequest,
       countSaved: request.countOfArticlesSavedToDbFromRequest,
       status: request.status,
+      andArray: request.andString,
+      orArray: request.orString,
+      notArray: request.notString,
     });
   }
+  console.log(`- returning arrayForTable.length: ${arrayForTable.length}`);
 
   res.json({ newsApiRequestsArray: arrayForTable });
 });

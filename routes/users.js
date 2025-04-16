@@ -11,7 +11,7 @@ router.get("/", function (req, res, next) {
   res.send("respond with a resource");
 });
 
-// 🔹 Register User (Create)
+// 🔹 POST /users/register: Register User (Create)
 router.post("/register", async (req, res) => {
   const { password, email } = req.body;
   const { isValid, missingKeys } = checkBodyReturnMissing(req.body, [
@@ -44,16 +44,14 @@ router.post("/register", async (req, res) => {
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
 
-  res
-    .status(201)
-    .json({
-      message: "User created successfully",
-      token,
-      user: { username: user.username, email: user.email },
-    });
+  res.status(201).json({
+    message: "User created successfully",
+    token,
+    user: { username: user.username, email: user.email },
+  });
 });
 
-// 🔹 Login User (Read)
+// 🔹 POST /users/login: Login User (Read)
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const { isValid, missingKeys } = checkBodyReturnMissing(req.body, [
@@ -84,7 +82,7 @@ router.post("/login", async (req, res) => {
   // res.status(500).json({ error: "Testing this error" });
 });
 
-// 🔹 Send reset token POST /users/request-password-reset
+// 🔹 POST /users/request-password-reset: Send reset token
 router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
 

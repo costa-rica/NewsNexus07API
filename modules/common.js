@@ -62,9 +62,10 @@ function writeRequestArgs(requestBody, fileNameSuffix) {
 
 function writeResponseDataFromNewsAggregator(
   NewsArticleAggregatorSourceId,
-  keywordId,
+  keywordId = "none",
   requestResponseData,
-  prefix = false
+  prefix = false,
+  requestUrl = ""
 ) {
   const formattedDate = new Date()
     .toISOString()
@@ -78,9 +79,13 @@ function writeResponseDataFromNewsAggregator(
     responseFilename = `${formattedDate}apiId${NewsArticleAggregatorSourceId}keywordId${keywordId}.json`;
   }
   const responseFilePath = path.join(responseDir, responseFilename);
+  let jsonToStore = requestResponseData;
+  if (requestUrl) {
+    jsonToStore.requestUrl = requestUrl;
+  }
   fs.writeFileSync(
     responseFilePath,
-    JSON.stringify(requestResponseData, null, 2),
+    JSON.stringify(jsonToStore, null, 2),
     "utf-8"
   );
 }
