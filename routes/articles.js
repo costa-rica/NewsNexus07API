@@ -74,14 +74,15 @@ router.post(
         where: { articleId },
       });
       status = `articleId ${articleId} is made relevant`;
-      articleIsRelevant = false;
+      articleIsRelevant = true;
     } else {
       await ArticleIsRelevant.create({
         articleId: articleId,
         userId: user.id,
+        isRelevant: false,
       });
       status = `articleId ${articleId} is marked as NOT relevant`;
-      articleIsRelevant = true;
+      articleIsRelevant = false;
     }
     res.json({ result: true, status, articleIsRelevant });
   }

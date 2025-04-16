@@ -10,7 +10,13 @@ const fs = require("fs");
 const path = require("path");
 
 // Make a single requuest to the News API API
-async function makeNewsApiRequest(source, keyword, startDate, endDate, max) {
+async function makeNewsApiRequest(
+  source,
+  keyword,
+  startDate,
+  endDate,
+  max = 100
+) {
   // Step 1: prepare token and dates
   const token = source.apiKey;
   if (!endDate) {

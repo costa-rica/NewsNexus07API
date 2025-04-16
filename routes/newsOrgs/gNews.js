@@ -17,7 +17,6 @@ router.post("/request", async (req, res) => {
       "startDate",
       "endDate",
       "keywordString",
-      "max",
     ]);
     if (!isValid) {
       return res.status(400).json({
@@ -43,8 +42,7 @@ router.post("/request", async (req, res) => {
       gNewsSourceObj,
       keywordObjModified,
       startDate,
-      endDate,
-      max
+      endDate
     );
 
     // if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "false") {
