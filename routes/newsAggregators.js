@@ -5,6 +5,8 @@ const {
   NewsApiRequest,
   EntityWhoFoundArticle,
   Keyword,
+  NewsApiRequestWebsiteDomainContract,
+  WebsiteDomain,
 } = require("newsnexus05db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
@@ -45,9 +47,25 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
 router.get("/requests", authenticateToken, async (req, res) => {
   console.log("- starting /requests");
   const newsApiRequestsArray = await NewsApiRequest.findAll({
-    include: [{ model: NewsArticleAggregatorSource, Keyword }],
+    include: [
+      {
+        model: NewsArticleAggregatorSource,
+      },
+      {
+        model: Keyword,
+      },
+      {
+        model: NewsApiRequestWebsiteDomainContract,
+        include: [
+          {
+            model: WebsiteDomain,
+          },
+        ],
+      },
+    ],
   });
-  console.log(`- newsApiRequestsArray.length: ${newsApiRequestsArray.length}`);
+  // console.log(`- newsApiRequestsArray.length: ${newsApiRequestsArray.length}`);
+  // console.log("- newsApiRequestsArray:", newsApiRequestsArray);
   const arrayForTable = [];
   for (let request of newsApiRequestsArray) {
     let keyword = "";
@@ -68,6 +86,21 @@ router.get("/requests", authenticateToken, async (req, res) => {
       keyword = keywordString;
     }
 
+    let includeSourcesArray = [];
+    let excludeSourcesArray = [];
+    let includeString = "";
+    let excludeString = "";
+    if (request.NewsApiRequestWebsiteDomainContracts.length > 0) {
+      request.NewsApiRequestWebsiteDomainContracts.forEach((domainContract) => {
+        if (domainContract.includedOrExcludedFromRequest === "included") {
+          includeSourcesArray.push(domainContract.WebsiteDomain);
+        } else {
+          excludeSourcesArray.push(domainContract.WebsiteDomain);
+        }
+      });
+      includeString = includeSourcesArray.join(",");
+      excludeString = excludeSourcesArray.join(",");
+    }
     arrayForTable.push({
       madeOn: request.dateEndOfRequest,
       nameOfOrg: request.NewsArticleAggregatorSource.nameOfOrg,
@@ -80,6 +113,10 @@ router.get("/requests", authenticateToken, async (req, res) => {
       andArray: request.andString,
       orArray: request.orString,
       notArray: request.notString,
+      includeSourcesArray,
+      includeString,
+      excludeSourcesArray,
+      excludeString,
     });
   }
   console.log(`- returning arrayForTable.length: ${arrayForTable.length}`);
