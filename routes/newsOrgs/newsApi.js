@@ -7,6 +7,7 @@ const {
   makeNewsApiRequest,
   storeNewsApiArticles,
   makeNewsApiRequestDetailed,
+  // makeNewsApiRequestDetailed02,
 } = require("../../modules/newsOrgs/requestsNewsApi");
 
 // 🔹 POST news-api/request
@@ -95,6 +96,18 @@ router.post("/detailed-news-api", async (req, res) => {
   } = req.body;
   // NOTE: andArray, orArray, notArray can include exact phrases i.e. "" or not ""
 
+  // if (Array.isArray(includeWebsiteDomainObjArray)) {
+  //   const includeSourcesArrayNames = includeWebsiteDomainObjArray.map(
+  //     (obj) => obj.name
+  //   );
+  //   console.log("includeSourcesArrayNames:", includeSourcesArrayNames);
+  // } else {
+  //   console.log(
+  //     "includeWebsiteDomainObjArray is not an array:",
+  //     includeWebsiteDomainObjArray
+  //   );
+  // }
+
   // Step 1: find NewsArticleAggregatorSource
   const newsApiSourceObj = await NewsArticleAggregatorSource.findOne({
     where: { nameOfOrg: "NewsAPI" },
@@ -112,6 +125,19 @@ router.post("/detailed-news-api", async (req, res) => {
       keywordsOr,
       keywordsNot
     );
+  // console.log("includeWebsiteDomainObjArray:", includeWebsiteDomainObjArray);
+
+  // if (Array.isArray(includeWebsiteDomainObjArray)) {
+  //   const includeSourcesArrayNames = includeWebsiteDomainObjArray.map(
+  //     (obj) => obj.name
+  //   );
+  //   console.log("includeSourcesArrayNames:", includeSourcesArrayNames);
+  // } else {
+  //   console.log(
+  //     "includeWebsiteDomainObjArray is not an array:",
+  //     includeWebsiteDomainObjArray
+  //   );
+  // }
 
   if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "true") {
     if (requestResponseData.articles) {
