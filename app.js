@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { sequelize } = require("newsnexus05db");
+const { sequelize } = require("newsnexus07db");
 var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");

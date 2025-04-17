@@ -1,6 +1,6 @@
 var express = require("express");
 var router = express.Router();
-const { Keyword } = require("newsnexus05db");
+const { Keyword } = require("newsnexus07db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 

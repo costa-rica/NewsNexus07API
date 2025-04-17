@@ -5,13 +5,13 @@ const {
   storeGNewsArticles,
 } = require("../../modules/newsOrgs/requestsGNews");
 const { checkBodyReturnMissing } = require("../../modules/common");
-const { NewsArticleAggregatorSource, Keyword } = require("newsnexus05db");
+const { NewsArticleAggregatorSource, Keyword } = require("newsnexus07db");
 
 // POST /gnews/request
 router.post("/request", async (req, res) => {
   // console.log("- starting request-gnews");
   try {
-    const { startDate, endDate, keywordString, max } = req.body;
+    const { startDate, endDate, keywordString } = req.body;
 
     const { isValid, missingKeys } = checkBodyReturnMissing(req.body, [
       "startDate",
@@ -30,17 +30,17 @@ router.post("/request", async (req, res) => {
       raw: true, // Returns data without all the database gibberish
     });
     // console.log(gNewsSourceObj);
-    const keywordObj = await Keyword.findOne({
-      where: { keyword: keywordString },
-      raw: true, // Returns data without all the database gibberish
-    });
-    const keywordObjModified = { ...keywordObj, keywordId: keywordObj.id };
+    // const keywordObj = await Keyword.findOne({
+    //   where: { keyword: keywordString },
+    //   raw: true, // Returns data without all the database gibberish
+    // });
+    // const keywordObjModified = { ...keywordObj, keywordId: keywordObj.id };
     // console.log(keywordObj);
     // // 2. make request
     // console.log(`- making request`);
     const { requestResponseData, newsApiRequestObj } = await makeGNewsRequest(
       gNewsSourceObj,
-      keywordObjModified,
+      keywordString,
       startDate,
       endDate
     );
@@ -58,11 +58,7 @@ router.post("/request", async (req, res) => {
 
     // // 3 save articles to db
     // console.log(`- saving articles`);
-    await storeGNewsArticles(
-      requestResponseData,
-      newsApiRequestObj,
-      keywordObjModified
-    );
+    await storeGNewsArticles(requestResponseData, newsApiRequestObj);
 
     res.json({
       result: true,

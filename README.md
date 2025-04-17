@@ -1,6 +1,6 @@
 ![Logo](./docs/images/logoAndNameRound.png)
 
-The API for the NewsNexus05Db and microservices suite of applications.
+The API for the NewsNexus07Db and microservices suite of applications.
 
 ## API Requests
 

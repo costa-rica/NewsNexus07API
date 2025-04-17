@@ -62,10 +62,11 @@ function writeRequestArgs(requestBody, fileNameSuffix) {
 
 function writeResponseDataFromNewsAggregator(
   NewsArticleAggregatorSourceId,
-  keywordId = "none",
+  // keywordId = "none",
+  newsApiRequest,
   requestResponseData,
-  prefix = false,
-  requestUrl = ""
+  prefix = false
+  // requestUrl = ""
 ) {
   const formattedDate = new Date()
     .toISOString()
@@ -74,14 +75,14 @@ function writeResponseDataFromNewsAggregator(
   const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
   let responseFilename;
   if (prefix) {
-    responseFilename = `failedToSave${formattedDate}apiId${NewsArticleAggregatorSourceId}keywordId${keywordId}.json`;
+    responseFilename = `failedToSave${formattedDate}apiId${NewsArticleAggregatorSourceId}requestId${newsApiRequest.id}.json`;
   } else {
-    responseFilename = `${formattedDate}apiId${NewsArticleAggregatorSourceId}keywordId${keywordId}.json`;
+    responseFilename = `${formattedDate}apiId${NewsArticleAggregatorSourceId}requestId${newsApiRequest.id}.json`;
   }
   const responseFilePath = path.join(responseDir, responseFilename);
   let jsonToStore = requestResponseData;
-  if (requestUrl) {
-    jsonToStore.requestUrl = requestUrl;
+  if (newsApiRequest.url) {
+    jsonToStore.requestUrl = newsApiRequest.url;
   }
   fs.writeFileSync(
     responseFilePath,

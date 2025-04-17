@@ -2,7 +2,7 @@ var express = require("express");
 var router = express.Router();
 
 const { checkBodyReturnMissing } = require("../../modules/common");
-const { NewsArticleAggregatorSource, Keyword } = require("newsnexus05db");
+const { NewsArticleAggregatorSource, Keyword } = require("newsnexus07db");
 const {
   makeNewsApiRequest,
   storeNewsApiArticles,
@@ -33,16 +33,16 @@ router.post("/request", async (req, res) => {
       where: { nameOfOrg: "NewsAPI" },
       raw: true, // Returns data without all the database gibberish
     });
-    // Step 2: create Keyword obj
-    const keywordObj = await Keyword.findOne({
-      where: { keyword: keywordString },
-      raw: true, // Returns data without all the database gibberish
-    });
-    const keywordObjModified = { ...keywordObj, keywordId: keywordObj.id };
+    // // Step 2: create Keyword obj
+    // const keywordObj = await Keyword.findOne({
+    //   where: { keyword: keywordString },
+    //   raw: true, // Returns data without all the database gibberish
+    // });
+    // const keywordObjModified = { ...keywordObj, keywordId: keywordObj.id };
     // Step 3: make request
     const { requestResponseData, newsApiRequest } = await makeNewsApiRequest(
       newsApiSourceObj,
-      keywordObjModified,
+      keywordString,
       startDate,
       endDate
     );
@@ -63,15 +63,15 @@ router.post("/request", async (req, res) => {
     // Step 4: store articles to db
     await storeNewsApiArticles(
       requestResponseData,
-      newsApiRequest,
-      keywordObjModified
+      newsApiRequest
+      // keywordObjModified
     );
 
     res.json({
       result: true,
       message: "Request sent successfully",
       newsApiSourceObj,
-      keywordObjModified,
+      // keywordObjModified,
     });
   } catch (error) {
     console.error("Error in /request:", error);

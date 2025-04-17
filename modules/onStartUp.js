@@ -1,4 +1,4 @@
-const { User, EntityWhoFoundArticle } = require("newsnexus05db");
+const { User, EntityWhoFoundArticle } = require("newsnexus07db");
 
 const bcrypt = require("bcrypt");
 const fs = require("fs");

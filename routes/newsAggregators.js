@@ -7,7 +7,7 @@ const {
   Keyword,
   NewsApiRequestWebsiteDomainContract,
   WebsiteDomain,
-} = require("newsnexus05db");
+} = require("newsnexus07db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 
@@ -51,9 +51,9 @@ router.get("/requests", authenticateToken, async (req, res) => {
       {
         model: NewsArticleAggregatorSource,
       },
-      {
-        model: Keyword,
-      },
+      // {
+      //   model: Keyword,
+      // },
       {
         model: NewsApiRequestWebsiteDomainContract,
         include: [
@@ -69,22 +69,22 @@ router.get("/requests", authenticateToken, async (req, res) => {
   const arrayForTable = [];
   for (let request of newsApiRequestsArray) {
     let keyword = "";
-    if (request.keywordId) {
-      const keywordObj = await Keyword.findByPk(request.keywordId);
-      keyword = keywordObj ? keywordObj.keyword : "Unknown";
-    } else {
-      let keywordString = "";
-      if (request.andString) {
-        keywordString = `AND ${request.andString}`;
-      }
-      if (request.orString) {
-        keywordString += ` OR ${request.orString}`;
-      }
-      if (request.notString) {
-        keywordString += ` NOT ${request.notString}`;
-      }
-      keyword = keywordString;
+    // if (request.keywordId) {
+    //   const keywordObj = await Keyword.findByPk(request.keywordId);
+    //   keyword = keywordObj ? keywordObj.keyword : "Unknown";
+    // } else {
+    let keywordString = "";
+    if (request.andString) {
+      keywordString = `AND ${request.andString}`;
     }
+    if (request.orString) {
+      keywordString += ` OR ${request.orString}`;
+    }
+    if (request.notString) {
+      keywordString += ` NOT ${request.notString}`;
+    }
+    keyword = keywordString;
+    // }
 
     let includeSourcesArray = [];
     let excludeSourcesArray = [];

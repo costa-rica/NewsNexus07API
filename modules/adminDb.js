@@ -28,7 +28,7 @@ const {
   ArticleIsRelevant,
   NewsApiRequestWebsiteDomainContract,
   WebsiteDomain,
-} = require("newsnexus05db");
+} = require("newsnexus07db");
 
 const { promisify } = require("util");
 const archiver = require("archiver");

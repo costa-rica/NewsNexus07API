@@ -3,15 +3,16 @@ const {
   NewsApiRequest,
   EntityWhoFoundArticle,
   NewsArticleAggregatorSource,
-} = require("newsnexus05db");
-
+} = require("newsnexus07db");
+const { writeResponseDataFromNewsAggregator } = require("../common");
 const fs = require("fs");
 const path = require("path");
 
 // Make a single request to the API
 async function makeGNewsRequest(
   source,
-  keyword,
+  // keyword,
+  keywordString,
   startDate = false,
   endDate = false,
   max = 10
@@ -30,9 +31,10 @@ async function makeGNewsRequest(
       .toISOString()
       .split("T")[0];
   }
+  const keywordLowerCase = keywordString.toLowerCase();
 
   const urlGnews = `${source.url}search?q=${encodeURIComponent(
-    keyword.keyword
+    keywordLowerCase
   )}&from=${startDate}&to=${endDate}&max=${max}&lang=en&token=${token}`;
 
   let requestResponseData;
@@ -46,7 +48,7 @@ async function makeGNewsRequest(
   // create new NewsApiRequest
   newsApiRequestObj = await NewsApiRequest.create({
     newsArticleAggregatorSourceId: source.id,
-    keywordId: keyword.keywordId,
+    andString: keywordString,
     dateStartOfRequest: startDate,
     dateEndOfRequest: new Date(),
     countOfArticlesReceivedFromRequest: requestResponseData.articles.length,
@@ -59,7 +61,7 @@ async function makeGNewsRequest(
 async function storeGNewsArticles(
   requestResponseData,
   newsApiRequest,
-  keyword
+  keywordString
 ) {
   // leverages the hasOne association from the NewsArticleAggregatorSource model
   const gNewsSource = await NewsArticleAggregatorSource.findOne({
@@ -98,32 +100,48 @@ async function storeGNewsArticles(
     });
     // store file with `YYYYMMDDapiId${gNewsSource.id}keywordId${keyword.id}`. json
     // store response JSON file
-    const formattedDate = new Date()
-      .toISOString()
-      .split("T")[0]
-      .replace(/-/g, "");
-    const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
-    const responseFileName = `${formattedDate}apiId${gNewsSource.id}keywordId${keyword.keywordId}.json`;
-    const responseFilePath = path.join(responseDir, responseFileName);
-    fs.writeFileSync(
-      responseFilePath,
-      JSON.stringify(requestResponseData, null, 2),
-      "utf-8"
+    // const formattedDate = new Date()
+    //   .toISOString()
+    //   .split("T")[0]
+    //   .replace(/-/g, "");
+    // const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
+    // const responseFileName = `${formattedDate}apiId${gNewsSource.id}keywordId${keyword.keywordId}.json`;
+    // const responseFilePath = path.join(responseDir, responseFileName);
+    // fs.writeFileSync(
+    //   responseFilePath,
+    //   JSON.stringify(requestResponseData, null, 2),
+    //   "utf-8"
+    // );
+
+    writeResponseDataFromNewsAggregator(
+      gNewsSource.id,
+      // keyword?.keywordId,
+      newsApiRequest,
+      requestResponseData,
+      false
+      // newsApiRequest.url
     );
   } catch (error) {
     console.error(error);
     // store file with `failedToSaveYYYYMMDDapiId${gNewsSource.id}keywordId${keyword.id}`. json
-    const formattedDate = new Date()
-      .toISOString()
-      .split("T")[0]
-      .replace(/-/g, "");
-    const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
-    const failedFileName = `failedToSave${formattedDate}apiId${gNewsSource.id}keywordId${keyword.keywordId}.json`;
-    const failedFilePath = path.join(responseDir, failedFileName);
-    fs.writeFileSync(
-      failedFilePath,
-      JSON.stringify(requestResponseData, null, 2),
-      "utf-8"
+    // const formattedDate = new Date()
+    //   .toISOString()
+    //   .split("T")[0]
+    //   .replace(/-/g, "");
+    // const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
+    // const failedFileName = `failedToSave${formattedDate}apiId${gNewsSource.id}keywordId${keyword.keywordId}.json`;
+    // const failedFilePath = path.join(responseDir, failedFileName);
+    // fs.writeFileSync(
+    //   failedFilePath,
+    //   JSON.stringify(requestResponseData, null, 2),
+    //   "utf-8"
+    // );
+    writeResponseDataFromNewsAggregator(
+      gNewsSource.id,
+      newsApiRequest,
+      requestResponseData,
+      true
+      // newsApiRequest.url
     );
   }
 }

@@ -1327,7 +1327,13 @@ negotiator@^0.6.2:
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.4.tgz#777948e2452651c570b712dd01c23e262713fff7"
   integrity sha512-myRT3DiWPHqho5PrJaIRyaMv2kgYf0mUVgBNOYMuCH5Ki1yEiQaf/ZJuQ62nvpc44wL5WDbTX7yGJi1Neevw8w==
 
-"newsnexus05db@file:../NewsNexus05Db":
+"newsnexus07db@file:../NewsNexus05Db":
+  version "1.0.0"
+  dependencies:
+    sequelize "^6.37.7"
+    sqlite3 "^5.1.7"
+
+"newsnexus07db@file:../NewsNexus07Db":
   version "1.0.0"
   dependencies:
     sequelize "^6.37.7"
