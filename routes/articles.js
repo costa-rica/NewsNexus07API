@@ -141,8 +141,18 @@ router.get("/get-approved/:articleId", authenticateToken, async (req, res) => {
 // 🔹 GET /approve/:articleId
 router.post("/approve/:articleId", authenticateToken, async (req, res) => {
   const { articleId } = req.params;
-  const { isApproved } = req.body;
+  const {
+    isApproved,
+    headlineForPdfReport,
+    publicationNameForPdfReport,
+    publicationDateForPdfReport,
+    textForPdfReport,
+    urlForPdfReport,
+    kmNotes,
+  } = req.body;
   const user = req.user;
+
+  console.log(`articleId ${articleId}: ${headlineForPdfReport}`);
 
   if (isApproved) {
     await ArticleApproved.create({
@@ -156,19 +166,6 @@ router.post("/approve/:articleId", authenticateToken, async (req, res) => {
     });
   }
 
-  // const existingRecord = await ArticleApproved.findOne({
-  //   where: { articleId },
-  // });
-  // if (existingRecord) {
-  //   return res.json({
-  //     result: false,
-  //     status: `articleId ${articleId} is already approved`,
-  //   });
-  // }
-  // await ArticleApproved.create({
-  //   articleId: articleId,
-  //   userId: user.id,
-  // });
   res.json({ result: true, status: `articleId ${articleId} is approved` });
 });
 
