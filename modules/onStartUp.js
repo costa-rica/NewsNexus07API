@@ -57,5 +57,10 @@ function verifyCheckDirectoryExists() {
     fs.mkdirSync(responseDir, { recursive: true });
     console.log(`Created directory: ${responseDir}`);
   }
+  const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
+  if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
+    console.log(`Created directory: ${reportsDir}`);
+  }
 }
 module.exports = { onStartUpCreateEnvUsers, verifyCheckDirectoryExists };

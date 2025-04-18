@@ -195,13 +195,14 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.ArticleIsRelevants.isRelevant !== false) {
       articlesIsRelevantCount++;
     }
-    if (article.ArticleApproveds.isApproved === true) {
+    if (article.ArticleApproveds.length > 0) {
       articlesIsApprovedCount++;
     }
     if (article.States.length > 0) {
       hasStateAssigned++;
     }
   });
+
   const summaryStatistics = {
     articlesCount,
     articlesIsRelevantCount,
