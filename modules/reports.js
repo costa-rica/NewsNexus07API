@@ -7,13 +7,15 @@ const archiver = require("archiver");
 function createCsvForReport(dataArray) {
   const fields = [
     { label: "Ref #", value: "refNumber" },
-    { label: "News Nexus Id", value: "id" },
+    { label: "Submitted", value: "submitted" },
     { label: "Headline", value: "headline" },
-    { label: "Publication Name", value: "publicationName" },
-    { label: "Web Link", value: "url" },
-    { label: "Description", value: "text" },
-    { label: "Date", value: "publicationDate" },
+    { label: "Publication", value: "publication" },
+    { label: "Date Published", value: "datePublished" },
     { label: "State", value: "state" },
+    { label: "Text", value: "text" },
+    // { label: "Description", value: "text" },
+    // { label: "Web Link", value: "url" },
+    // { label: "News Nexus Id", value: "id" },
   ];
 
   const json2csvParser = new Parser({ fields });
@@ -59,14 +61,22 @@ function createReportPdfFiles(dataArray) {
     doc.pipe(writeStream);
 
     const fields = [
+      // { label: "Ref #", value: "refNumber" },
+      // { label: "Submitted", value: "submitted" },
+      // { label: "Headline", value: "headline" },
+      // { label: "Publication", value: "publication" },
+      // { label: "Date Published", value: "datePublished" },
+      // { label: "State", value: "state" },
+      // { label: "Text", value: "text" },
+
       { label: "Ref #", value: article.refNumber },
-      { label: "News Nexus Id", value: article.id },
+      // { label: "News Nexus Id", value: article.id },
+      { label: "Submitted", value: article.submitted },
       { label: "Headline", value: article.headline },
-      { label: "Publication Name", value: article.publicationName },
-      { label: "Web Link", value: article.url },
-      { label: "Description", value: article.text },
-      { label: "Date", value: article.publicationDate },
+      { label: "Publication", value: article.publication },
+      { label: "Date Published", value: article.datePublished },
       { label: "State", value: article.state },
+      { label: "Text", value: article.text },
     ];
 
     fields.forEach(({ label, value }, index) => {

@@ -220,6 +220,7 @@ router.post("/add-article", authenticateToken, async (req, res) => {
     author,
     title,
     description,
+    content,
     url,
     publishedDate,
     stateObjArray,
@@ -259,7 +260,7 @@ router.post("/add-article", authenticateToken, async (req, res) => {
       headlineForPdfReport: title,
       publicationNameForPdfReport: publicationName,
       publicationDateForPdfReport: publishedDate,
-      textForPdfReport: description,
+      textForPdfReport: content,
       urlForPdfReport: url,
       kmNotes,
     });

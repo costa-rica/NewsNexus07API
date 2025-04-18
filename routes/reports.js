@@ -84,14 +84,12 @@ router.post("/create", authenticateToken, async (req, res) => {
     }
     approvedArticlesObjArrayModified.push({
       refNumber: article.refNumber,
-      id: article.id,
+      submitted: new Date().toISOString().slice(0, 10),
       headline: article.ArticleApproveds[0].headlineForPdfReport,
-      publicationName: article.ArticleApproveds[0].publicationNameForPdfReport,
-      publicationDate: article.ArticleApproveds[0].publicationDateForPdfReport,
-      text: article.ArticleApproveds[0].textForPdfReport,
-      url: article.ArticleApproveds[0].urlForPdfReport,
-      kmNotes: article.ArticleApproveds[0].kmNotes,
+      publication: article.ArticleApproveds[0].publicationNameForPdfReport,
+      datePublished: article.ArticleApproveds[0].publicationDateForPdfReport,
       state,
+      text: article.ArticleApproveds[0].textForPdfReport,
     });
   }
 
