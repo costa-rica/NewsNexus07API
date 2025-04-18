@@ -6,7 +6,8 @@ const {
   ArticleIsRelevant,
   ArticleApproved,
   NewsApiRequest,
-  // Keyword,
+  EntityWhoFoundArticle,
+  ArticleStateContract,
 } = require("newsnexus07db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
@@ -210,6 +211,61 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     hasStateAssigned,
   };
   res.json({ summaryStatistics });
+});
+
+// 🔹 POST /add-article
+router.post("/add-article", authenticateToken, async (req, res) => {
+  const {
+    publicationName,
+    author,
+    title,
+    description,
+    url,
+    publishedDate,
+    stateObjArray,
+    isApproved,
+    kmNotes,
+  } = req.body;
+  const user = req.user;
+
+  const entityWhoFoundArticleObj = await EntityWhoFoundArticle.findOne({
+    where: { userId: user.id },
+  });
+
+  const newArticle = await Article.create({
+    publicationName,
+    author,
+    title,
+    description,
+    url,
+    publishedDate,
+    entityWhoFoundArticleId: entityWhoFoundArticleObj.id,
+  });
+
+  console.log(`stateObjArray: ${stateObjArray}`);
+
+  for (let stateObj of stateObjArray) {
+    await ArticleStateContract.create({
+      articleId: newArticle.id,
+      stateId: stateObj.id,
+    });
+  }
+
+  if (isApproved) {
+    await ArticleApproved.create({
+      userId: user.id,
+      articleId: newArticle.id,
+      isApproved,
+      headlineForPdfReport: title,
+      publicationNameForPdfReport: publicationName,
+      publicationDateForPdfReport: publishedDate,
+      textForPdfReport: description,
+      urlForPdfReport: url,
+      kmNotes,
+    });
+  }
+
+  res.json({ result: true, newArticle });
 });
 
 module.exports = router;
