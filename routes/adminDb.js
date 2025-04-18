@@ -165,6 +165,7 @@ router.get("/send-db-backup/:filename", authenticateToken, async (req, res) => {
     }
 
     const filePath = path.join(backupDir, filename);
+    console.log(`filePath: ${filePath}`);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {

@@ -103,24 +103,75 @@ function createReportZipFile(csvFilename) {
   const zipFilename = `report_bundle_${timestamp}.zip`;
   const zipPath = path.join(outputDir, zipFilename);
 
-  const output = fs.createWriteStream(zipPath);
-  const archive = archiver("zip", { zlib: { level: 9 } });
-
   return new Promise((resolve, reject) => {
-    output.on("close", () => resolve(zipFilename));
-    archive.on("error", (err) => reject(err));
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
 
+    output.on("close", () => {
+      // ✅ Only run cleanup AFTER the zip file is fully written
+      try {
+        fs.unlinkSync(path.join(outputDir, csvFilename)); // delete .csv
+        fs.rmSync(pdfDir, { recursive: true, force: true }); // delete pdf dir and all contents
+        resolve(zipFilename);
+      } catch (cleanupError) {
+        reject(cleanupError);
+      }
+    });
+
+    archive.on("error", (err) => reject(err));
     archive.pipe(output);
 
-    // Add CSV file
     archive.file(path.join(outputDir, csvFilename), { name: csvFilename });
-
-    // Add PDF folder and its contents
     archive.directory(pdfDir, "article_pdfs");
 
     archive.finalize();
   });
 }
+
+// function createReportZipFile(csvFilename) {
+//   const outputDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
+//   if (!outputDir) {
+//     throw new Error(
+//       "PATH_PROJECT_RESOURCES_REPORTS environment variable not set."
+//     );
+//   }
+
+//   const pdfDir = path.join(outputDir, "article_pdfs");
+
+//   const now = new Date();
+//   const timestamp = now
+//     .toISOString()
+//     .replace(/[-:]/g, "")
+//     .replace("T", "-")
+//     .slice(0, 8);
+
+//   const zipFilename = `report_bundle_${timestamp}.zip`;
+//   const zipPath = path.join(outputDir, zipFilename);
+
+//   const output = fs.createWriteStream(zipPath);
+//   const archive = archiver("zip", { zlib: { level: 9 } });
+
+//   new Promise((resolve, reject) => {
+//     output.on("close", () => resolve(zipFilename));
+//     archive.on("error", (err) => reject(err));
+
+//     archive.pipe(output);
+
+//     // Add CSV file
+//     archive.file(path.join(outputDir, csvFilename), { name: csvFilename });
+
+//     // Add PDF folder and its contents
+//     archive.directory(pdfDir, "article_pdfs");
+
+//     archive.finalize();
+//     // delete .csv file
+//     fs.unlinkSync(path.join(outputDir, csvFilename));
+//     // delete .pdf directory
+//     fs.rmdirSync(pdfDir);
+//   });
+
+//   // return zipFilename;
+// }
 module.exports = {
   createCsvForReport,
   createReportPdfFiles,
