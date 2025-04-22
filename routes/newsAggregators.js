@@ -51,9 +51,7 @@ router.get("/requests", authenticateToken, async (req, res) => {
       {
         model: NewsArticleAggregatorSource,
       },
-      // {
-      //   model: Keyword,
-      // },
+
       {
         model: NewsApiRequestWebsiteDomainContract,
         include: [
@@ -64,15 +62,11 @@ router.get("/requests", authenticateToken, async (req, res) => {
       },
     ],
   });
-  // console.log(`- newsApiRequestsArray.length: ${newsApiRequestsArray.length}`);
-  // console.log("- newsApiRequestsArray:", newsApiRequestsArray);
+
   const arrayForTable = [];
   for (let request of newsApiRequestsArray) {
     let keyword = "";
-    // if (request.keywordId) {
-    //   const keywordObj = await Keyword.findByPk(request.keywordId);
-    //   keyword = keywordObj ? keywordObj.keyword : "Unknown";
-    // } else {
+
     let keywordString = "";
     if (request.andString) {
       keywordString = `AND ${request.andString}`;
@@ -84,23 +78,38 @@ router.get("/requests", authenticateToken, async (req, res) => {
       keywordString += ` NOT ${request.notString}`;
     }
     keyword = keywordString;
-    // }
 
     let includeSourcesArray = [];
     let excludeSourcesArray = [];
     let includeString = "";
     let excludeString = "";
+    // console.log(JSON.stringify(request.NewsApiRequestWebsiteDomainContracts));
     if (request.NewsApiRequestWebsiteDomainContracts.length > 0) {
+      const excludeArrayForString = [];
+      const includeArrayForString = [];
       request.NewsApiRequestWebsiteDomainContracts.forEach((domainContract) => {
+        if (domainContract.includedOrExcludedFromRequest === "excluded") {
+          excludeSourcesArray.push(domainContract.WebsiteDomain);
+          excludeArrayForString.push(domainContract.WebsiteDomain.name);
+        }
         if (domainContract.includedOrExcludedFromRequest === "included") {
           includeSourcesArray.push(domainContract.WebsiteDomain);
-        } else {
-          excludeSourcesArray.push(domainContract.WebsiteDomain);
+          includeArrayForString.push(domainContract.WebsiteDomain.name);
         }
       });
-      includeString = includeSourcesArray.join(",");
-      excludeString = excludeSourcesArray.join(",");
+      includeString = includeArrayForString.join(", ");
+      excludeString = excludeArrayForString.join(", ");
     }
+
+    if (includeString) {
+      // console.log(`- includeString: ${includeString}`);
+      keyword += ` INCLUDE ${includeString}`;
+    }
+    if (excludeString) {
+      // console.log(`- excludeString: ${excludeString}`);
+      keyword += ` EXCLUDE ${excludeString}`;
+    }
+
     arrayForTable.push({
       madeOn: request.dateEndOfRequest,
       nameOfOrg: request.NewsArticleAggregatorSource.nameOfOrg,
@@ -118,8 +127,9 @@ router.get("/requests", authenticateToken, async (req, res) => {
       excludeSourcesArray,
       excludeString,
     });
+    // sort arrayForTable by madeOn descending
+    arrayForTable.sort((a, b) => new Date(b.madeOn) - new Date(a.madeOn));
   }
-  console.log(`- returning arrayForTable.length: ${arrayForTable.length}`);
 
   res.json({ newsApiRequestsArray: arrayForTable });
 });
