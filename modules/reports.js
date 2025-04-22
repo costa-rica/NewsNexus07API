@@ -10,12 +10,9 @@ function createCsvForReport(dataArray) {
     { label: "Submitted", value: "submitted" },
     { label: "Headline", value: "headline" },
     { label: "Publication", value: "publication" },
-    { label: "Date Published", value: "datePublished" },
+    { label: "Date", value: "datePublished" },
     { label: "State", value: "state" },
     { label: "Text", value: "text" },
-    // { label: "Description", value: "text" },
-    // { label: "Web Link", value: "url" },
-    // { label: "News Nexus Id", value: "id" },
   ];
 
   const json2csvParser = new Parser({ fields });
@@ -33,10 +30,11 @@ function createCsvForReport(dataArray) {
     .toISOString()
     .replace(/[-:]/g, "")
     .replace("T", "-")
-    .slice(0, 15);
-  const fileName = `report_${timestamp}.csv`;
+    .slice(2, 8);
+  const fileName = `cr${timestamp}.csv`;
   const filePath = path.join(outputDir, fileName);
-  fs.writeFileSync(filePath, csv);
+  // fs.writeFileSync(filePath, csv);
+  fs.writeFileSync(filePath, "\uFEFF" + csv); // prepend UTF-8 BOM
 
   return fileName;
 }
@@ -61,20 +59,11 @@ function createReportPdfFiles(dataArray) {
     doc.pipe(writeStream);
 
     const fields = [
-      // { label: "Ref #", value: "refNumber" },
-      // { label: "Submitted", value: "submitted" },
-      // { label: "Headline", value: "headline" },
-      // { label: "Publication", value: "publication" },
-      // { label: "Date Published", value: "datePublished" },
-      // { label: "State", value: "state" },
-      // { label: "Text", value: "text" },
-
       { label: "Ref #", value: article.refNumber },
-      // { label: "News Nexus Id", value: article.id },
       { label: "Submitted", value: article.submitted },
       { label: "Headline", value: article.headline },
       { label: "Publication", value: article.publication },
-      { label: "Date Published", value: article.datePublished },
+      { label: "Date", value: article.datePublished },
       { label: "State", value: article.state },
       { label: "Text", value: article.text },
     ];
@@ -138,50 +127,6 @@ function createReportZipFile(csvFilename) {
   });
 }
 
-// function createReportZipFile(csvFilename) {
-//   const outputDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
-//   if (!outputDir) {
-//     throw new Error(
-//       "PATH_PROJECT_RESOURCES_REPORTS environment variable not set."
-//     );
-//   }
-
-//   const pdfDir = path.join(outputDir, "article_pdfs");
-
-//   const now = new Date();
-//   const timestamp = now
-//     .toISOString()
-//     .replace(/[-:]/g, "")
-//     .replace("T", "-")
-//     .slice(0, 8);
-
-//   const zipFilename = `report_bundle_${timestamp}.zip`;
-//   const zipPath = path.join(outputDir, zipFilename);
-
-//   const output = fs.createWriteStream(zipPath);
-//   const archive = archiver("zip", { zlib: { level: 9 } });
-
-//   new Promise((resolve, reject) => {
-//     output.on("close", () => resolve(zipFilename));
-//     archive.on("error", (err) => reject(err));
-
-//     archive.pipe(output);
-
-//     // Add CSV file
-//     archive.file(path.join(outputDir, csvFilename), { name: csvFilename });
-
-//     // Add PDF folder and its contents
-//     archive.directory(pdfDir, "article_pdfs");
-
-//     archive.finalize();
-//     // delete .csv file
-//     fs.unlinkSync(path.join(outputDir, csvFilename));
-//     // delete .pdf directory
-//     fs.rmdirSync(pdfDir);
-//   });
-
-//   // return zipFilename;
-// }
 module.exports = {
   createCsvForReport,
   createReportPdfFiles,

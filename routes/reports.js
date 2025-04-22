@@ -147,55 +147,55 @@ router.get("/list", authenticateToken, async (req, res) => {
   }
 });
 
-// 🔹 GET /reports/send/:reportId Send Report
-router.get("/send/:reportId", authenticateToken, async (req, res) => {
-  console.log(`- in GET /reports/send/${req.params.reportId}`);
+// // 🔹 GET /reports/send/:reportId Send Report
+// router.get("/send/:reportId", authenticateToken, async (req, res) => {
+//   console.log(`- in GET /reports/send/${req.params.reportId}`);
 
-  try {
-    const { reportId } = req.params;
-    const report = await Report.findByPk(reportId);
-    if (!report) {
-      return res
-        .status(404)
-        .json({ result: false, message: "Report not found." });
-    }
-    const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
+//   try {
+//     const { reportId } = req.params;
+//     const report = await Report.findByPk(reportId);
+//     if (!report) {
+//       return res
+//         .status(404)
+//         .json({ result: false, message: "Report not found." });
+//     }
+//     const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
 
-    if (!reportsDir) {
-      return res
-        .status(500)
-        .json({ result: false, message: "Reports directory not configured." });
-    }
+//     if (!reportsDir) {
+//       return res
+//         .status(500)
+//         .json({ result: false, message: "Reports directory not configured." });
+//     }
 
-    const filePath = path.join(report.pathToReport);
+//     const filePath = path.join(report.pathToReport);
 
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res
-        .status(404)
-        .json({ result: false, message: "File not found." });
-    }
+//     // Check if file exists
+//     if (!fs.existsSync(filePath)) {
+//       return res
+//         .status(404)
+//         .json({ result: false, message: "File not found." });
+//     }
 
-    console.log(`Sending file: ${report.pathToReport}`);
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${report.pathToReport}`
-    );
-    res.download(report.pathToReport, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-        res.status(500).json({ result: false, message: "Error sending file." });
-      }
-    });
-  } catch (error) {
-    console.error("Error processing request:", error);
-    res.status(500).json({
-      result: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-});
+//     console.log(`Sending file: ${report.pathToReport}`);
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename=${report.pathToReport}`
+//     );
+//     res.download(report.pathToReport, (err) => {
+//       if (err) {
+//         console.error("Error sending file:", err);
+//         res.status(500).json({ result: false, message: "Error sending file." });
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Error processing request:", error);
+//     res.status(500).json({
+//       result: false,
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// });
 
 // 🔹 DELETE /reports/:reportId - Delete Report
 router.delete("/:reportId", authenticateToken, async (req, res) => {
@@ -224,6 +224,60 @@ router.delete("/:reportId", authenticateToken, async (req, res) => {
     res.json({ result: true, message: "Report deleted successfully." });
   } catch (error) {
     console.error("Error deleting report:", error);
+    res.status(500).json({
+      result: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+});
+
+// 🔹 GET /reports/download/:reportId - Download Report
+router.get("/download/:reportId", authenticateToken, async (req, res) => {
+  console.log(`- in GET /reports/download/${req.params.reportId}`);
+
+  const reportId = req.params.reportId;
+  const report = await Report.findByPk(reportId);
+  if (!report) {
+    return res
+      .status(404)
+      .json({ result: false, message: "Report not found." });
+  }
+  try {
+    const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
+
+    if (!reportsDir) {
+      return res
+        .status(500)
+        .json({ result: false, message: "Reports directory not configured." });
+    }
+
+    // const filePath = path.join(backupDir, filename);
+
+    const filePath = path.join(report.pathToReport);
+    console.log(`filePath: ${filePath}`);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res
+        .status(404)
+        .json({ result: false, message: "File not found." });
+    }
+
+    console.log(`Sending file: ${filePath}`);
+    const filename = path.basename(report.pathToReport);
+    console.log(`filename: ${filename}`);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+    // res.download(filePath, filename, (err) => {
+    res.download(filePath, (err) => {
+      if (err) {
+        console.error("Error sending file:", err);
+        res.status(500).json({ result: false, message: "Error sending file." });
+      }
+    });
+  } catch (error) {
+    console.error("Error processing request:", error);
     res.status(500).json({
       result: false,
       message: "Internal server error",
