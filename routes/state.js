@@ -5,7 +5,7 @@ const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 
 // 🔹 GET /states: Get API
-router.get("/", authenticateToken, async (req, res) => {
+router.get("/", async (req, res) => {
   const statesArray = await State.findAll();
   // make an array of just the states
   res.json({ statesArray });
