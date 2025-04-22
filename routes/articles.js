@@ -8,6 +8,7 @@ const {
   NewsApiRequest,
   EntityWhoFoundArticle,
   ArticleStateContract,
+  ArticleContent,
 } = require("newsnexus07db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
@@ -267,6 +268,27 @@ router.post("/add-article", authenticateToken, async (req, res) => {
   }
 
   res.json({ result: true, newArticle });
+});
+
+// 🔹 DELETE /articles/:articleId - Delete Article
+router.delete("/:articleId", authenticateToken, async (req, res) => {
+  const { articleId } = req.params;
+  await Article.destroy({
+    where: { id: articleId },
+  });
+  await ArticleApproved.destroy({
+    where: { articleId },
+  });
+  await ArticleIsRelevant.destroy({
+    where: { articleId },
+  });
+  await ArticleStateContract.destroy({
+    where: { articleId },
+  });
+  await ArticleContent.destroy({
+    where: { articleId },
+  });
+  res.json({ result: true, status: `articleId ${articleId} deleted` });
 });
 
 module.exports = router;
