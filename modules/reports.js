@@ -3,6 +3,59 @@ const path = require("path");
 const { Parser } = require("json2csv");
 const PDFDocument = require("pdfkit");
 const archiver = require("archiver");
+const ExcelJS = require("exceljs");
+
+async function createXlsxForReport(dataArray) {
+  console.log(` 🔹 createXlsxForReport`);
+  const outputDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
+  if (!outputDir) {
+    throw new Error(
+      "PATH_PROJECT_RESOURCES_REPORTS environment variable not set."
+    );
+  }
+  try {
+    const now = new Date();
+    const timestamp = now
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace("T", "-")
+      .slice(2, 8);
+    const fileName = `cr${timestamp}.xlsx`;
+    const filePath = path.join(outputDir, fileName);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Report");
+    console.log(`filename: ${fileName}`);
+    const columns = [
+      { header: "Ref #", key: "refNumber", width: 15 },
+      { header: "Submitted", key: "submitted", width: 15 },
+      { header: "Headline", key: "headline", width: 40 },
+      { header: "Publication", key: "publication", width: 30 },
+      { header: "Date", key: "datePublished", width: 15 },
+      { header: "State", key: "state", width: 10 },
+      { header: "Text", key: "text", width: 80 },
+    ];
+
+    worksheet.columns = columns;
+
+    dataArray.forEach((row) => {
+      worksheet.addRow(row);
+    });
+
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.alignment = { wrapText: false, vertical: "top" };
+      });
+    });
+    // console.log(`dataArray: ${JSON.stringify(dataArray)}`);
+    await workbook.xlsx.writeFile(filePath);
+    console.log("---> finished createXlsxForReport");
+    return fileName;
+  } catch (error) {
+    console.error(`Error creating XLSX file: ${error.message}`);
+    throw error;
+  }
+}
 
 function createCsvForReport(dataArray) {
   const fields = [
@@ -131,4 +184,5 @@ module.exports = {
   createCsvForReport,
   createReportPdfFiles,
   createReportZipFile,
+  createXlsxForReport,
 };

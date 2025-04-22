@@ -13,6 +13,7 @@ const {
   createCsvForReport,
   createReportPdfFiles,
   createReportZipFile,
+  createXlsxForReport,
 } = require("../modules/reports");
 const fs = require("fs");
 const path = require("path");
@@ -98,9 +99,10 @@ router.post("/create", authenticateToken, async (req, res) => {
   // step 2: create a csv file and save to PATH_PROJECT_RESOURCES_REPORTS
   try {
     const filteredArticles = approvedArticlesObjArrayModified.filter(Boolean); // remove nulls
-    const csvFilename = createCsvForReport(filteredArticles);
+    // const csvFilename = createCsvForReport(filteredArticles);
+    const xlsxFilename = await createXlsxForReport(filteredArticles);
     createReportPdfFiles(filteredArticles); // Generate PDFs for each article
-    const zipFilename = await createReportZipFile(csvFilename);
+    const zipFilename = await createReportZipFile(xlsxFilename);
 
     report.pathToReport = path.join(
       process.env.PATH_PROJECT_RESOURCES_REPORTS,
