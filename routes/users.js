@@ -144,4 +144,45 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   res.status(200).json({ message: "User deleted successfully" });
 });
 
+// 🔹 Update User (PATCH-like behavior)
+router.post(
+  "/update/:userId",
+  authenticateToken, // Ensure the user is authenticated
+  async (req, res) => {
+    const { userId } = req.params;
+    const { username, password, email, isAdmin } = req.body;
+
+    console.log(`Updating user ${userId}`);
+
+    // Find the user by ID
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé." });
+    }
+
+    // Prepare update object (only include non-null fields)
+    const updatedFields = {};
+    if (username) updatedFields.username = username;
+    if (email) updatedFields.email = email;
+    if (typeof isAdmin === "boolean") {
+      updatedFields.isAdmin = isAdmin;
+    }
+
+    // If password is provided, hash it before updating
+    if (password) {
+      updatedFields.password = await bcrypt.hash(password, 10);
+    }
+
+    // Perform the update if there are fields to update
+    if (Object.keys(updatedFields).length > 0) {
+      await user.update(updatedFields);
+      console.log(`User ${userId} updated successfully`);
+    } else {
+      console.log(`No updates applied for user ${userId}`);
+    }
+
+    res.status(200).json({ message: "Mise à jour réussie.", user });
+  }
+);
+
 module.exports = router;
