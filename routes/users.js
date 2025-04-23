@@ -144,7 +144,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   res.status(200).json({ message: "User deleted successfully" });
 });
 
-// 🔹 Update User (PATCH-like behavior)
+// 🔹 POST /update/:userId: Update User (PATCH-like behavior)
 router.post(
   "/update/:userId",
   authenticateToken, // Ensure the user is authenticated
@@ -157,7 +157,7 @@ router.post(
     // Find the user by ID
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ error: "Utilisateur non trouvé." });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Prepare update object (only include non-null fields)
