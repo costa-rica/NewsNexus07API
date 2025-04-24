@@ -60,8 +60,8 @@ async function makeGNewsRequest(
 // Store the articles of a single request in Aritcle and update NewsApiRequest
 async function storeGNewsArticles(
   requestResponseData,
-  newsApiRequest,
-  keywordString
+  newsApiRequestObj
+  // keywordString
 ) {
   // leverages the hasOne association from the NewsArticleAggregatorSource model
   const gNewsSource = await NewsArticleAggregatorSource.findOne({
@@ -90,12 +90,12 @@ async function storeGNewsArticles(
         urlToImage: article.image,
         publishedDate: article.publishedAt,
         entityWhoFoundArticleId: entityWhoFoundArticleId,
-        newsApiRequestId: newsApiRequest.id,
+        newsApiRequestId: newsApiRequestObj.id,
       });
       countOfArticlesSavedToDbFromRequest++;
     }
     // Append NewsApiRequest
-    await newsApiRequest.update({
+    await newsApiRequestObj.update({
       countOfArticlesSavedToDbFromRequest: countOfArticlesSavedToDbFromRequest,
     });
     // store file with `YYYYMMDDapiId${gNewsSource.id}keywordId${keyword.id}`. json
@@ -116,7 +116,7 @@ async function storeGNewsArticles(
     writeResponseDataFromNewsAggregator(
       gNewsSource.id,
       // keyword?.keywordId,
-      newsApiRequest,
+      newsApiRequestObj,
       requestResponseData,
       false
       // newsApiRequest.url
@@ -138,7 +138,7 @@ async function storeGNewsArticles(
     // );
     writeResponseDataFromNewsAggregator(
       gNewsSource.id,
-      newsApiRequest,
+      newsApiRequestObj,
       requestResponseData,
       true
       // newsApiRequest.url
@@ -146,7 +146,107 @@ async function storeGNewsArticles(
   }
 }
 
+async function makeGNewsApiRequestDetailed(
+  sourceObj,
+  startDate,
+  endDate,
+  keywordsAnd,
+  keywordsOr,
+  keywordsNot
+) {
+  console.log("- in makeGNewsApiRequestDetailed");
+
+  function splitPreservingQuotes(str) {
+    return str.match(/"[^"]+"|\S+/g)?.map((s) => s.trim()) || [];
+  }
+
+  const andArray = splitPreservingQuotes(keywordsAnd ? keywordsAnd : "");
+  const orArray = splitPreservingQuotes(keywordsOr ? keywordsOr : "");
+  const notArray = splitPreservingQuotes(keywordsNot ? keywordsNot : "");
+
+  console.log(`andArray: ${andArray}`);
+
+  // Step 1: prepare token and dates
+  const token = sourceObj.apiKey;
+  if (!endDate) {
+    endDate = new Date().toISOString().split("T")[0];
+  }
+  if (!startDate) {
+    // startDate should be 29 days prior to endDate - account limitation
+    startDate = new Date(new Date().setDate(new Date().getDate() - 29))
+      .toISOString()
+      .split("T")[0];
+  }
+
+  let queryParams = [];
+
+  console.log(`startDate: ${startDate}`);
+  const andPart = andArray.length > 0 ? andArray.join(" AND ") : "";
+  const orPart = orArray.length > 0 ? `(${orArray.join(" OR ")})` : "";
+  const notPart =
+    notArray.length > 0 ? notArray.map((k) => `NOT ${k}`).join(" AND ") : "";
+
+  const fullQuery = [andPart, orPart, notPart].filter(Boolean).join(" AND ");
+  console.log(`fullQuery: ${fullQuery}`);
+  if (fullQuery) {
+    queryParams.push(`q=${encodeURIComponent(fullQuery)}`);
+  }
+
+  if (startDate) {
+    queryParams.push(`from=${startDate}`);
+  }
+
+  if (endDate) {
+    queryParams.push(`to=${endDate}`);
+  }
+  queryParams.push(`max=100`);
+
+  // Always required
+  queryParams.push("lang=en");
+  queryParams.push("country=us");
+  queryParams.push(`apikey=${sourceObj.apiKey}`);
+
+  const requestUrl = `${sourceObj.url}search?${queryParams.join("&")}`;
+  console.log(` [in makeGNewsApiRequestDetailed] requestUrl: ${requestUrl}`);
+  console.log(` [in makeGNewsApiRequestDetailed] queryParams: ${queryParams}`);
+
+  let status = "success";
+  let requestResponseData = null;
+  let newsApiRequestObj = null;
+  if (process.env.ACTIVATE_API_REQUESTS_TO_OUTSIDE_SOURCES === "true") {
+    const response = await fetch(requestUrl);
+    requestResponseData = await response.json();
+
+    if (!requestResponseData.articles) {
+      status = "error";
+      writeResponseDataFromNewsAggregator(
+        source.id,
+        { id: "failed", url: requestUrl },
+        requestResponseData,
+        true
+      );
+    }
+    // Step 4: create new NewsApiRequest
+    newsApiRequestObj = await NewsApiRequest.create({
+      newsArticleAggregatorSourceId: sourceObj.id,
+      dateStartOfRequest: startDate,
+      dateEndOfRequest: new Date(),
+      countOfArticlesReceivedFromRequest: requestResponseData.articles?.length,
+      status,
+      url: requestUrl,
+      andString: keywordsAnd,
+      orString: keywordsOr,
+      notString: keywordsNot,
+    });
+  } else {
+    newsApiRequestObj = requestUrl;
+  }
+
+  return { requestResponseData, newsApiRequestObj };
+}
+
 module.exports = {
   makeGNewsRequest,
   storeGNewsArticles,
+  makeGNewsApiRequestDetailed,
 };
