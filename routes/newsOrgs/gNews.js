@@ -6,7 +6,7 @@ const {
   makeGNewsApiRequestDetailed,
 } = require("../../modules/newsOrgs/requestsGNews");
 const { checkBodyReturnMissing } = require("../../modules/common");
-const { NewsArticleAggregatorSource, Keyword } = require("newsnexus07db");
+const { NewsArticleAggregatorSource } = require("newsnexus07db");
 
 // POST /gnews/request
 router.post("/request", async (req, res) => {
