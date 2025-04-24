@@ -98,20 +98,6 @@ async function storeGNewsArticles(
     await newsApiRequestObj.update({
       countOfArticlesSavedToDbFromRequest: countOfArticlesSavedToDbFromRequest,
     });
-    // store file with `YYYYMMDDapiId${gNewsSource.id}keywordId${keyword.id}`. json
-    // store response JSON file
-    // const formattedDate = new Date()
-    //   .toISOString()
-    //   .split("T")[0]
-    //   .replace(/-/g, "");
-    // const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
-    // const responseFileName = `${formattedDate}apiId${gNewsSource.id}keywordId${keyword.keywordId}.json`;
-    // const responseFilePath = path.join(responseDir, responseFileName);
-    // fs.writeFileSync(
-    //   responseFilePath,
-    //   JSON.stringify(requestResponseData, null, 2),
-    //   "utf-8"
-    // );
 
     writeResponseDataFromNewsAggregator(
       gNewsSource.id,
@@ -123,19 +109,7 @@ async function storeGNewsArticles(
     );
   } catch (error) {
     console.error(error);
-    // store file with `failedToSaveYYYYMMDDapiId${gNewsSource.id}keywordId${keyword.id}`. json
-    // const formattedDate = new Date()
-    //   .toISOString()
-    //   .split("T")[0]
-    //   .replace(/-/g, "");
-    // const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
-    // const failedFileName = `failedToSave${formattedDate}apiId${gNewsSource.id}keywordId${keyword.keywordId}.json`;
-    // const failedFilePath = path.join(responseDir, failedFileName);
-    // fs.writeFileSync(
-    //   failedFilePath,
-    //   JSON.stringify(requestResponseData, null, 2),
-    //   "utf-8"
-    // );
+
     writeResponseDataFromNewsAggregator(
       gNewsSource.id,
       newsApiRequestObj,
