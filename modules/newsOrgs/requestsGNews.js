@@ -19,7 +19,9 @@ async function makeGNewsRequest(
 ) {
   const token = source.apiKey;
   if (!endDate) {
-    endDate = new Date().toISOString().split("T")[0];
+    endDate = new Date().toISOString().replace(".000", "");
+  } else {
+    endDate = new Date(endDate).toISOString().replace(".000", "");
   }
   if (!startDate) {
     // startDate should be 160 days prior to endDate
@@ -29,7 +31,9 @@ async function makeGNewsRequest(
       )
     )
       .toISOString()
-      .split("T")[0];
+      .replace(".000", "");
+  } else {
+    startDate = new Date(startDate).toISOString().replace(".000", "");
   }
   const keywordLowerCase = keywordString.toLowerCase();
 
@@ -42,8 +46,6 @@ async function makeGNewsRequest(
 
   const requestResponse = await fetch(urlGnews);
   requestResponseData = await requestResponse.json();
-
-  console.log(urlGnews);
 
   // create new NewsApiRequest
   newsApiRequestObj = await NewsApiRequest.create({
@@ -167,11 +169,17 @@ async function makeGNewsApiRequestDetailed(
   }
 
   if (startDate) {
-    queryParams.push(`from=${startDate}`);
+    const formattedStartDate = new Date(startDate)
+      .toISOString()
+      .replace(".000", "");
+    queryParams.push(`from=${formattedStartDate}`);
   }
 
   if (endDate) {
-    queryParams.push(`to=${endDate}`);
+    const formattedEndDate = new Date(endDate)
+      .toISOString()
+      .replace(".000", "");
+    queryParams.push(`to=${formattedEndDate}`);
   }
   queryParams.push(`max=100`);
 
@@ -182,7 +190,7 @@ async function makeGNewsApiRequestDetailed(
 
   const requestUrl = `${sourceObj.url}search?${queryParams.join("&")}`;
   console.log(` [in makeGNewsApiRequestDetailed] requestUrl: ${requestUrl}`);
-  console.log(` [in makeGNewsApiRequestDetailed] queryParams: ${queryParams}`);
+  // console.log(` [in makeGNewsApiRequestDetailed] queryParams: ${queryParams}`);
 
   let status = "success";
   let requestResponseData = null;
