@@ -43,10 +43,28 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
 
   res.json({ message: "Aggregator added successfully", aggregator });
 });
-// 🔹 GET /news-aggregators/requests: this sends the list of all the requests the Portal "Get Articles page"
-router.get("/requests", authenticateToken, async (req, res) => {
+// 🔹 POST /news-aggregators/requests: this sends the list of all the requests the Portal "Get Articles page"
+router.post("/requests", authenticateToken, async (req, res) => {
   console.log("- starting /requests");
+
+  const { dateLimitOnRequestMade, includeIsFromAutomation } = req.body;
+  console.log(`body: ${JSON.stringify(req.body)}`);
+
+  // Build where clause dynamically
+  const whereClause = {};
+
+  if (dateLimitOnRequestMade) {
+    whereClause.createdAt = {
+      [require("sequelize").Op.gte]: new Date(dateLimitOnRequestMade),
+    };
+  }
+
+  if (includeIsFromAutomation !== true) {
+    whereClause.isFromAutomation = false;
+  }
+
   const newsApiRequestsArray = await NewsApiRequest.findAll({
+    where: whereClause,
     include: [
       {
         model: NewsArticleAggregatorSource,
