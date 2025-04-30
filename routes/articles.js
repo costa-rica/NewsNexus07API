@@ -13,70 +13,70 @@ const {
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 
-// 🔹 GET /articles: all articles
-router.get("/", authenticateToken, async (req, res) => {
-  console.log("- GET /articles");
-  const articlesArray = await Article.findAll({
-    include: [
-      {
-        model: State,
-        through: { attributes: [] }, // omit ArticleStateContract from result
-      },
-      {
-        model: ArticleIsRelevant,
-      },
-      {
-        model: ArticleApproved,
-      },
-      {
-        model: NewsApiRequest,
-        // include: [Keyword],
-      },
-    ],
-  });
+// // OBE GET /articles: all articles
+// router.get("/", authenticateToken, async (req, res) => {
+//   console.log("- GET /articles");
+//   const articlesArray = await Article.findAll({
+//     include: [
+//       {
+//         model: State,
+//         through: { attributes: [] }, // omit ArticleStateContract from result
+//       },
+//       {
+//         model: ArticleIsRelevant,
+//       },
+//       {
+//         model: ArticleApproved,
+//       },
+//       {
+//         model: NewsApiRequest,
+//         // include: [Keyword],
+//       },
+//     ],
+//   });
 
-  console.log("- articlesArray.length: ", articlesArray.length);
-  // make an array of just the articles
-  const articlesArrayModified = articlesArray.map((article) => {
-    // create states string
-    const states = article.States.map((state) => state.name).join(", ");
-    // create isRelevant boolean: if there is any false isRelevant, return false
-    const isRelevant =
-      !article.ArticleIsRelevants ||
-      article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
-    // create isApproved boolean: if there is any true isApproved, return true
-    const isApproved =
-      article.ArticleApproveds &&
-      article.ArticleApproveds.some((entry) => entry.userId !== null);
-    let keyword = null;
-    if (!keyword) {
-      let keywordString = "";
-      if (article.NewsApiRequest?.andString) {
-        keywordString = `AND ${article.NewsApiRequest?.andString}`;
-      }
-      if (article.NewsApiRequest?.orString) {
-        keywordString += ` OR ${article.NewsApiRequest?.orString}`;
-      }
-      if (article.NewsApiRequest?.notString) {
-        keywordString += ` NOT ${article.NewsApiRequest?.notString}`;
-      }
-      keyword = keywordString;
-    }
+//   console.log("- articlesArray.length: ", articlesArray.length);
+//   // make an array of just the articles
+//   const articlesArrayModified = articlesArray.map((article) => {
+//     // create states string
+//     const states = article.States.map((state) => state.name).join(", ");
+//     // create isRelevant boolean: if there is any false isRelevant, return false
+//     const isRelevant =
+//       !article.ArticleIsRelevants ||
+//       article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+//     // create isApproved boolean: if there is any true isApproved, return true
+//     const isApproved =
+//       article.ArticleApproveds &&
+//       article.ArticleApproveds.some((entry) => entry.userId !== null);
+//     let keyword = null;
+//     if (!keyword) {
+//       let keywordString = "";
+//       if (article.NewsApiRequest?.andString) {
+//         keywordString = `AND ${article.NewsApiRequest?.andString}`;
+//       }
+//       if (article.NewsApiRequest?.orString) {
+//         keywordString += ` OR ${article.NewsApiRequest?.orString}`;
+//       }
+//       if (article.NewsApiRequest?.notString) {
+//         keywordString += ` NOT ${article.NewsApiRequest?.notString}`;
+//       }
+//       keyword = keywordString;
+//     }
 
-    return {
-      ...article.dataValues,
-      states,
-      isRelevant,
-      isApproved,
-      keyword,
-    };
-  });
-  console.log(
-    "- returning articlesArrayModified.length: ",
-    articlesArrayModified.length
-  );
-  res.json({ articlesArray: articlesArrayModified });
-});
+//     return {
+//       ...article.dataValues,
+//       states,
+//       isRelevant,
+//       isApproved,
+//       keyword,
+//     };
+//   });
+//   console.log(
+//     "- returning articlesArrayModified.length: ",
+//     articlesArrayModified.length
+//   );
+//   res.json({ articlesArray: articlesArrayModified });
+// });
 
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
