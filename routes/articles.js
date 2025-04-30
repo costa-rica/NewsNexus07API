@@ -78,6 +78,190 @@ router.get("/", authenticateToken, async (req, res) => {
   res.json({ articlesArray: articlesArrayModified });
 });
 
+// 🔹 POST /articles: filtered list of articles
+router.post("/", authenticateToken, async (req, res) => {
+  console.log("- POST /articles");
+
+  const {
+    returnOnlyThisPublishedDateOrAfter,
+    returnOnlyIsNotApproved,
+    returnOnlyIsRelevant,
+  } = req.body;
+  // const {
+  //   returnOnlyThisPublishedDateOrAfter,
+  //   returnApprovedAlso,
+  //   returnNotRelevantAlso,
+  // } = req.body;
+
+  const { Op } = require("sequelize");
+
+  const whereClause = {};
+
+  // Apply publishedDate filter if provided
+  if (returnOnlyThisPublishedDateOrAfter) {
+    whereClause.publishedDate = {
+      [Op.gte]: new Date(returnOnlyThisPublishedDateOrAfter),
+    };
+  }
+
+  const articlesArray = await Article.findAll({
+    where: whereClause,
+    include: [
+      {
+        model: State,
+        through: { attributes: [] },
+      },
+      {
+        model: ArticleIsRelevant,
+      },
+      {
+        model: ArticleApproved,
+      },
+      {
+        model: NewsApiRequest,
+      },
+    ],
+  });
+
+  console.log(
+    "- articlesArray.length (before filtering):",
+    articlesArray.length
+  );
+
+  // Filter in JavaScript based on related tables
+  const articlesArrayFiltered = articlesArray.filter((article) => {
+    // Filter out not approved if requested
+    if (
+      returnOnlyIsNotApproved &&
+      article.ArticleApproveds &&
+      article.ArticleApproveds.length > 0
+    ) {
+      return false;
+    }
+
+    // Filter out not relevant if requested
+    if (
+      returnOnlyIsRelevant &&
+      article.ArticleIsRelevants &&
+      article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  console.log(
+    "- articlesArrayFiltered.length (after filtering):",
+    articlesArrayFiltered.length
+  );
+
+  const articlesArrayModified = articlesArrayFiltered.map((article) => {
+    const states = article.States.map((state) => state.name).join(", ");
+    const isRelevant =
+      !article.ArticleIsRelevants ||
+      article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+    const isApproved =
+      article.ArticleApproveds &&
+      article.ArticleApproveds.some((entry) => entry.userId !== null);
+
+    let keyword = "";
+    if (article.NewsApiRequest?.andString)
+      keyword += `AND ${article.NewsApiRequest.andString}`;
+    if (article.NewsApiRequest?.orString)
+      keyword += ` OR ${article.NewsApiRequest.orString}`;
+    if (article.NewsApiRequest?.notString)
+      keyword += ` NOT ${article.NewsApiRequest.notString}`;
+
+    return {
+      ...article.dataValues,
+      states,
+      isRelevant,
+      isApproved,
+      keyword,
+    };
+  });
+
+  res.json({ articlesArray: articlesArrayModified });
+});
+
+// // 🔹 POST /articles: all articles
+// router.post("/", authenticateToken, async (req, res) => {
+//   console.log("- POST /articles");
+
+//   const {
+//     returnOnlyThisPublishedDateOrAfter,
+//     returnOnlyIsNotApproved,
+//     returnOnlyIsRelevant,
+//   } = req.body;
+
+//   const articlesArray = await Article.findAll({
+//     where: {
+//       publishedDate: {
+//         [Op.gte]: returnOnlyThisPublishedDateOrAfter,
+//       },
+//     },
+//     include: [
+//       {
+//         model: State,
+//         through: { attributes: [] }, // omit ArticleStateContract from result
+//       },
+//       {
+//         model: ArticleIsRelevant,
+//       },
+//       {
+//         model: ArticleApproved,
+//       },
+//       {
+//         model: NewsApiRequest,
+//         // include: [Keyword],
+//       },
+//     ],
+//   });
+
+//   console.log("- articlesArray.length: ", articlesArray.length);
+//   // make an array of just the articles
+//   const articlesArrayModified = articlesArray.map((article) => {
+//     // create states string
+//     const states = article.States.map((state) => state.name).join(", ");
+//     // create isRelevant boolean: if there is any false isRelevant, return false
+//     const isRelevant =
+//       !article.ArticleIsRelevants ||
+//       article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+//     // create isApproved boolean: if there is any true isApproved, return true
+//     const isApproved =
+//       article.ArticleApproveds &&
+//       article.ArticleApproveds.some((entry) => entry.userId !== null);
+//     let keyword = null;
+//     if (!keyword) {
+//       let keywordString = "";
+//       if (article.NewsApiRequest?.andString) {
+//         keywordString = `AND ${article.NewsApiRequest?.andString}`;
+//       }
+//       if (article.NewsApiRequest?.orString) {
+//         keywordString += ` OR ${article.NewsApiRequest?.orString}`;
+//       }
+//       if (article.NewsApiRequest?.notString) {
+//         keywordString += ` NOT ${article.NewsApiRequest?.notString}`;
+//       }
+//       keyword = keywordString;
+//     }
+
+//     return {
+//       ...article.dataValues,
+//       states,
+//       isRelevant,
+//       isApproved,
+//       keyword,
+//     };
+//   });
+//   console.log(
+//     "- returning articlesArrayModified.length: ",
+//     articlesArrayModified.length
+//   );
+//   res.json({ articlesArray: articlesArrayModified });
+// });
+
 // 🔹 GET /is-not-relevant/:articleId
 router.post(
   "/user-toggle-is-not-relevant/:articleId",
