@@ -135,7 +135,7 @@ function createReportPdfFiles(dataArray) {
   return pdfOutputDir;
 }
 
-function createReportZipFile(csvFilename) {
+function createReportZipFile(csvFilename, zipFilename) {
   const outputDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
   if (!outputDir) {
     throw new Error(
@@ -146,13 +146,13 @@ function createReportZipFile(csvFilename) {
   const pdfDir = path.join(outputDir, "article_pdfs");
 
   const now = new Date();
-  const timestamp = now
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace("T", "-")
-    .slice(0, 8);
+  // const timestamp = now
+  //   .toISOString()
+  //   .replace(/[-:]/g, "")
+  //   .replace("T", "-")
+  //   .slice(0, 8);
 
-  const zipFilename = `report_bundle_${timestamp}.zip`;
+  // const zipFilename = `report_bundle_${timestamp}.zip`;
   const zipPath = path.join(outputDir, zipFilename);
 
   return new Promise((resolve, reject) => {

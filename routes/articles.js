@@ -224,6 +224,12 @@ router.get("/approved", authenticateToken, async (req, res) => {
     return {
       ...article.dataValues,
       isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
+      articleReferenceNumberInReport:
+        article.ArticleReportContracts.length > 0
+          ? article.ArticleReportContracts[
+              article.ArticleReportContracts.length - 1
+            ].articleReferenceNumberInReport
+          : "N/A",
     };
   });
 
