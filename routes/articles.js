@@ -9,6 +9,7 @@ const {
   EntityWhoFoundArticle,
   ArticleStateContract,
   ArticleContent,
+  ArticleReportContract,
 } = require("newsnexus07db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
@@ -185,82 +186,54 @@ router.post("/", authenticateToken, async (req, res) => {
   res.json({ articlesArray: articlesArrayModified });
 });
 
-// // 🔹 POST /articles: all articles
-// router.post("/", authenticateToken, async (req, res) => {
-//   console.log("- POST /articles");
+// 🔹 GET /articles/approved
+router.get("/approved", authenticateToken, async (req, res) => {
+  console.log("- GET /articles/approved");
 
-//   const {
-//     returnOnlyThisPublishedDateOrAfter,
-//     returnOnlyIsNotApproved,
-//     returnOnlyIsRelevant,
-//   } = req.body;
+  const articlesArray = await Article.findAll({
+    // where: whereClause,
+    include: [
+      {
+        model: State,
+        through: { attributes: [] },
+      },
+      {
+        model: ArticleIsRelevant,
+      },
+      {
+        model: ArticleApproved,
+      },
+      {
+        model: NewsApiRequest,
+      },
+      { model: ArticleReportContract },
+    ],
+  });
 
-//   const articlesArray = await Article.findAll({
-//     where: {
-//       publishedDate: {
-//         [Op.gte]: returnOnlyThisPublishedDateOrAfter,
-//       },
-//     },
-//     include: [
-//       {
-//         model: State,
-//         through: { attributes: [] }, // omit ArticleStateContract from result
-//       },
-//       {
-//         model: ArticleIsRelevant,
-//       },
-//       {
-//         model: ArticleApproved,
-//       },
-//       {
-//         model: NewsApiRequest,
-//         // include: [Keyword],
-//       },
-//     ],
-//   });
+  // Filter in JavaScript based on related tables
+  const articlesArrayFiltered = articlesArray.filter((article) => {
+    // Filter out not approved if requested
+    if (article.ArticleApproveds && article.ArticleApproveds.length > 0) {
+      return true;
+    }
 
-//   console.log("- articlesArray.length: ", articlesArray.length);
-//   // make an array of just the articles
-//   const articlesArrayModified = articlesArray.map((article) => {
-//     // create states string
-//     const states = article.States.map((state) => state.name).join(", ");
-//     // create isRelevant boolean: if there is any false isRelevant, return false
-//     const isRelevant =
-//       !article.ArticleIsRelevants ||
-//       article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
-//     // create isApproved boolean: if there is any true isApproved, return true
-//     const isApproved =
-//       article.ArticleApproveds &&
-//       article.ArticleApproveds.some((entry) => entry.userId !== null);
-//     let keyword = null;
-//     if (!keyword) {
-//       let keywordString = "";
-//       if (article.NewsApiRequest?.andString) {
-//         keywordString = `AND ${article.NewsApiRequest?.andString}`;
-//       }
-//       if (article.NewsApiRequest?.orString) {
-//         keywordString += ` OR ${article.NewsApiRequest?.orString}`;
-//       }
-//       if (article.NewsApiRequest?.notString) {
-//         keywordString += ` NOT ${article.NewsApiRequest?.notString}`;
-//       }
-//       keyword = keywordString;
-//     }
+    return false;
+  });
 
-//     return {
-//       ...article.dataValues,
-//       states,
-//       isRelevant,
-//       isApproved,
-//       keyword,
-//     };
-//   });
-//   console.log(
-//     "- returning articlesArrayModified.length: ",
-//     articlesArrayModified.length
-//   );
-//   res.json({ articlesArray: articlesArrayModified });
-// });
+  const articlesArrayModified = articlesArrayFiltered.map((article) => {
+    return {
+      ...article.dataValues,
+      isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
+    };
+  });
+
+  console.log(
+    "- articlesArrayFiltered.length (after filtering):",
+    articlesArrayModified.length
+  );
+
+  res.json({ articlesArray: articlesArrayModified });
+});
 
 // 🔹 GET /is-not-relevant/:articleId
 router.post(

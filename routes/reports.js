@@ -103,13 +103,13 @@ router.post("/create", authenticateToken, async (req, res) => {
     const xlsxFilename = await createXlsxForReport(filteredArticles);
     createReportPdfFiles(filteredArticles); // Generate PDFs for each article
     const zipFilename = await createReportZipFile(xlsxFilename);
-
-    report.pathToReport = path.join(
-      process.env.PATH_PROJECT_RESOURCES_REPORTS,
-      zipFilename
-    );
-    report.hasPdf = true;
-    report.hasCsv = true;
+    report.reportName = zipFilename;
+    // report.pathToReport = path.join(
+    //   process.env.PATH_PROJECT_RESOURCES_REPORTS,
+    //   zipFilename
+    // );
+    // report.hasPdf = true;
+    // report.hasCsv = true;
     await report.save();
 
     res.json({ message: "CSV created", zipFilename });
@@ -149,56 +149,6 @@ router.get("/list", authenticateToken, async (req, res) => {
   }
 });
 
-// // 🔹 GET /reports/send/:reportId Send Report
-// router.get("/send/:reportId", authenticateToken, async (req, res) => {
-//   console.log(`- in GET /reports/send/${req.params.reportId}`);
-
-//   try {
-//     const { reportId } = req.params;
-//     const report = await Report.findByPk(reportId);
-//     if (!report) {
-//       return res
-//         .status(404)
-//         .json({ result: false, message: "Report not found." });
-//     }
-//     const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
-
-//     if (!reportsDir) {
-//       return res
-//         .status(500)
-//         .json({ result: false, message: "Reports directory not configured." });
-//     }
-
-//     const filePath = path.join(report.pathToReport);
-
-//     // Check if file exists
-//     if (!fs.existsSync(filePath)) {
-//       return res
-//         .status(404)
-//         .json({ result: false, message: "File not found." });
-//     }
-
-//     console.log(`Sending file: ${report.pathToReport}`);
-//     res.setHeader(
-//       "Content-Disposition",
-//       `attachment; filename=${report.pathToReport}`
-//     );
-//     res.download(report.pathToReport, (err) => {
-//       if (err) {
-//         console.error("Error sending file:", err);
-//         res.status(500).json({ result: false, message: "Error sending file." });
-//       }
-//     });
-//   } catch (error) {
-//     console.error("Error processing request:", error);
-//     res.status(500).json({
-//       result: false,
-//       message: "Internal server error",
-//       error: error.message,
-//     });
-//   }
-// });
-
 // 🔹 DELETE /reports/:reportId - Delete Report
 router.delete("/:reportId", authenticateToken, async (req, res) => {
   console.log(`- in DELETE /reports/${req.params.reportId}`);
@@ -215,11 +165,12 @@ router.delete("/:reportId", authenticateToken, async (req, res) => {
     // Delete report and associated files
     await report.destroy();
     const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
+    const filePath = path.join(reportsDir, report.reportName);
     if (reportsDir) {
-      console.log(`- Deleting report file: ${report.pathToReport}`);
-      if (fs.existsSync(report.pathToReport)) {
+      console.log(`- Deleting report file: ${filePath}`);
+      if (fs.existsSync(filePath)) {
         console.log(`---->  in if (fs.existsSync(filePath))`);
-        fs.unlinkSync(report.pathToReport);
+        fs.unlinkSync(filePath);
       }
     }
 
@@ -256,7 +207,7 @@ router.get("/download/:reportId", authenticateToken, async (req, res) => {
 
     // const filePath = path.join(backupDir, filename);
 
-    const filePath = path.join(report.pathToReport);
+    const filePath = path.join(reportsDir, report.reportName);
     console.log(`filePath: ${filePath}`);
 
     // Check if file exists
@@ -267,9 +218,13 @@ router.get("/download/:reportId", authenticateToken, async (req, res) => {
     }
 
     console.log(`Sending file: ${filePath}`);
-    const filename = path.basename(report.pathToReport);
-    console.log(`filename: ${filename}`);
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    // const filename = path.basename(report.pathToReport);
+    console.log(`filename: ${report.reportName}`);
+    // res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${report.reportName}"`
+    );
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     // res.download(filePath, filename, (err) => {
     res.download(filePath, (err) => {
