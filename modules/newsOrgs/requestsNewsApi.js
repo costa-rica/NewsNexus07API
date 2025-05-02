@@ -257,7 +257,7 @@ async function makeNewsApiRequestDetailed(
     newsApiRequest = await NewsApiRequest.create({
       newsArticleAggregatorSourceId: source.id,
       dateStartOfRequest: startDate,
-      dateEndOfRequest: new Date(),
+      dateEndOfRequest: endDate,
       countOfArticlesReceivedFromRequest: requestResponseData.articles?.length,
       status,
       url: requestUrl,
