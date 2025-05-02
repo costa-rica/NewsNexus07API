@@ -129,7 +129,8 @@ router.post("/requests", authenticateToken, async (req, res) => {
     }
 
     arrayForTable.push({
-      madeOn: request.dateEndOfRequest,
+      // madeOn: request.dateEndOfRequest,
+      madeOn: request.createdAt.toISOString().split("T")[0],
       nameOfOrg: request.NewsArticleAggregatorSource.nameOfOrg,
       keyword,
       startDate: request.dateStartOfRequest,
