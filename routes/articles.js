@@ -391,6 +391,18 @@ router.post("/add-article", authenticateToken, async (req, res) => {
     isApproved,
     kmNotes,
   } = req.body;
+
+  console.log(`publicationName: ${publicationName}`);
+  console.log(`author: ${author}`);
+  console.log(`title: ${title}`);
+  console.log(`description: ${description}`);
+  console.log(`content: ${content}`);
+  console.log(`url: ${url}`);
+  console.log(`publishedDate: ${publishedDate}`);
+  console.log(`stateObjArray: ${stateObjArray}`);
+  console.log(`isApproved: ${isApproved}`);
+  console.log(`kmNotes: ${kmNotes}`);
+
   const user = req.user;
 
   const entityWhoFoundArticleObj = await EntityWhoFoundArticle.findOne({

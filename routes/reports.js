@@ -30,18 +30,27 @@ router.get("/", authenticateToken, async (req, res) => {
   });
 
   const reportsArrayModified = reports.map((report) => {
-    let dateSubmittedToClient;
-    if (report.dateSubmittedToClient === null) {
-      dateSubmittedToClient = "N/A";
-    } else {
-      dateSubmittedToClient = report.dateSubmittedToClient;
-    }
+    const rawDate = report?.dateSubmittedToClient;
+    const isValidDate = rawDate && !isNaN(new Date(rawDate).getTime());
+
     return {
       ...report.dataValues,
-      dateSubmittedToClient,
+      dateSubmittedToClient: isValidDate ? rawDate : "N/A",
     };
   });
-
+  // const reportsArrayModified = reports.map((report) => {
+  //   let dateSubmittedToClient;
+  //   if (report.dateSubmittedToClient === null) {
+  //     dateSubmittedToClient = "N/A";
+  //   } else {
+  //     dateSubmittedToClient = report.dateSubmittedToClient;
+  //   }
+  //   return {
+  //     ...report.dataValues,
+  //     dateSubmittedToClient,
+  //   };
+  // });
+  // console.log("reportsArrayModified: ", reportsArrayModified);
   res.json({ reportsArray: reportsArrayModified });
 });
 
