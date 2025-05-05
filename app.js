@@ -16,6 +16,7 @@ var articlesRouter = require("./routes/articles");
 var statesRouter = require("./routes/state");
 var websiteDomainsRouter = require("./routes/websiteDomains");
 var reportsRouter = require("./routes/reports");
+var automationsRouter = require("./routes/newsOrgs/automations");
 
 var app = express();
 const cors = require("cors");
@@ -38,6 +39,7 @@ app.use("/articles", articlesRouter);
 app.use("/states", statesRouter);
 app.use("/website-domains", websiteDomainsRouter);
 app.use("/reports", reportsRouter);
+app.use("/automations", automationsRouter);
 
 const {
   onStartUpCreateEnvUsers,
