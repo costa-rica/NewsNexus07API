@@ -86,4 +86,76 @@ router.post(
   }
 );
 
+// 🔹 GET /web-browser-extensions
+router.get("/web-browser-extensions", authenticateToken, async (req, res) => {
+  try {
+    const webBrowserExtensionsDir = path.join(
+      process.env.PATH_PROJECT_RESOURCES,
+      "utilities",
+      "web_browser_extensions"
+    );
+    if (!webBrowserExtensionsDir) {
+      return res
+        .status(500)
+        .json({ result: false, message: "Backup directory not configured." });
+    }
+
+    // Read files in the backup directory
+    const files = await fs.promises.readdir(webBrowserExtensionsDir);
+
+    // Filter only .zip files
+    const webBrowserExtensionsArray = files.filter((file) =>
+      file.endsWith(".zip")
+    );
+
+    // console.log(`Found ${zipFiles.length} backup files.`);
+
+    res.json({ result: true, webBrowserExtensionsArray });
+  } catch (error) {
+    console.error("Error retrieving web browser extensions list:", error);
+    res.status(500).json({
+      result: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+});
+
+// 🔹 GET /web-browser-extensions/:filename
+router.get(
+  "/web-browser-extension/:filename",
+  authenticateToken,
+  (req, res) => {
+    const webBrowserExtensionsDir = path.join(
+      process.env.PATH_PROJECT_RESOURCES,
+      "utilities",
+      "web_browser_extensions"
+    );
+    const filePath = path.join(webBrowserExtensionsDir, req.params.filename);
+
+    // Extra check for file existence
+    if (!fs.existsSync(filePath)) {
+      return res
+        .status(404)
+        .json({ result: false, message: "File not found." });
+    }
+
+    // Set content type explicitly
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    // Let Express handle download
+    res.download(filePath, req.params.filename, (err) => {
+      if (err) {
+        console.error("Download error:", err);
+        res
+          .status(500)
+          .json({ result: false, message: "File download failed." });
+      }
+    });
+  }
+);
+
 module.exports = router;
