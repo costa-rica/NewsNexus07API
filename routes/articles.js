@@ -443,8 +443,78 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
   `;
 
   try {
-    const [results, metadata] = await sequelize.query(sql);
-    res.json({ articlesArray: results });
+    // const [results, metadata] = await sequelize.query(sql);
+    // res.json({ articlesArray: results });
+
+    const [rawArticles, metadata] = await sequelize.query(sql);
+    const articleIds = rawArticles.map((a) => a.id);
+
+    // Fetch states
+    const articleStates = await ArticleStateContract.findAll({
+      where: { articleId: articleIds },
+      include: [State],
+    });
+    const statesByArticle = new Map();
+    articleStates.forEach((asc) => {
+      if (!statesByArticle.has(asc.articleId))
+        statesByArticle.set(asc.articleId, []);
+      statesByArticle.get(asc.articleId).push(asc.State.name);
+    });
+
+    // Fetch relevance
+    const relevants = await ArticleIsRelevant.findAll({
+      where: { articleId: articleIds },
+    });
+    const relevanceMap = new Map();
+    relevants.forEach((r) => {
+      if (!relevanceMap.has(r.articleId)) relevanceMap.set(r.articleId, []);
+      relevanceMap.get(r.articleId).push(r.isRelevant);
+    });
+
+    // Fetch approvals
+    const approvals = await ArticleApproved.findAll({
+      where: { articleId: articleIds },
+    });
+    const approvalMap = new Map();
+    approvals.forEach((a) => {
+      approvalMap.set(a.articleId, true);
+    });
+
+    // Fetch NewsApiRequest for keyword info
+    const articlesWithKeyword = await Article.findAll({
+      where: { id: articleIds },
+      include: [{ model: NewsApiRequest }],
+    });
+    const keywordMap = new Map();
+    articlesWithKeyword.forEach((article) => {
+      let keyword = "";
+      const req = article.NewsApiRequest;
+      if (req?.andString) keyword += `AND ${req.andString}`;
+      if (req?.orString) keyword += ` OR ${req.orString}`;
+      if (req?.notString) keyword += ` NOT ${req.notString}`;
+      keywordMap.set(article.id, keyword);
+    });
+
+    // Combine everything into final results
+    const finalArticles = rawArticles.map((article) => {
+      const states = statesByArticle.get(article.id) || [];
+      const relevanceValues = relevanceMap.get(article.id);
+      const isRelevant =
+        relevanceValues === undefined ||
+        relevanceValues.every((val) => val !== false);
+      const isApproved = approvalMap.has(article.id);
+      const keyword = keywordMap.get(article.id) || "";
+
+      return {
+        ...article,
+        states: states.join(", "),
+        isRelevant,
+        isApproved,
+        keyword,
+      };
+    });
+
+    res.json({ articlesArray: finalArticles });
   } catch (error) {
     console.error("❌ SQL error in /with-ratings:", error);
     res.status(500).json({ error: "Failed to fetch articles with ratings." });
