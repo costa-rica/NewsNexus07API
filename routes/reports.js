@@ -356,4 +356,39 @@ router.post(
   }
 );
 
+// 🔹 POST /reports/update-article-report-reference-number/:articleReportContractId
+router.post(
+  "/update-article-report-reference-number/:articleReportContractId",
+  authenticateToken,
+  async (req, res) => {
+    console.log(
+      `- in POST /reports/update-article-report-reference-number/${req.params.articleReportContractId}`
+    );
+
+    const articleReportContractId = req.params.articleReportContractId;
+    const { articleReferenceNumberInReport } = req.body;
+    const articleReportContract = await ArticleReportContract.findByPk(
+      articleReportContractId
+    );
+    if (!articleReportContract) {
+      return res
+        .status(404)
+        .json({ result: false, message: "Article Report Contract not found." });
+    }
+    console.log(
+      `---> current Ref Number : ${articleReportContract.articleReferenceNumberInReport}`
+    );
+
+    articleReportContract.articleReferenceNumberInReport =
+      articleReferenceNumberInReport;
+    await articleReportContract.save();
+
+    res.json({
+      result: true,
+      message: "Article report reference number updated successfully.",
+      articleReportContract,
+    });
+  }
+);
+
 module.exports = router;
