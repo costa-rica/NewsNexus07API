@@ -1,6 +1,7 @@
 var express = require("express");
 var router = express.Router();
 const {
+  sequelize,
   Article,
   State,
   ArticleIsRelevant,
@@ -51,9 +52,6 @@ router.post("/", authenticateToken, async (req, res) => {
       },
       {
         model: NewsApiRequest,
-      },
-      {
-        model: ArticleEntityWhoCategorizedArticleContract,
       },
     ],
   });
@@ -108,31 +106,6 @@ router.post("/", authenticateToken, async (req, res) => {
     if (article.NewsApiRequest?.notString)
       keyword += ` NOT ${article.NewsApiRequest.notString}`;
 
-    // Compute highest keywordRating and corresponding keyword
-    let keywordRating = null;
-    let keywordOfRating = null;
-    if (
-      Array.isArray(article.ArticleEntityWhoCategorizedArticleContracts) &&
-      article.ArticleEntityWhoCategorizedArticleContracts.length > 0
-    ) {
-      let maxObj = article.ArticleEntityWhoCategorizedArticleContracts.reduce(
-        (acc, curr) => {
-          if (
-            typeof curr.keywordRating === "number" &&
-            (acc === null || curr.keywordRating > acc.keywordRating)
-          ) {
-            return curr;
-          }
-          return acc;
-        },
-        null
-      );
-      if (maxObj) {
-        keywordRating = maxObj.keywordRating;
-        keywordOfRating = maxObj.keyword;
-      }
-    }
-
     return {
       // ...article.dataValues,
       id: article.id,
@@ -144,8 +117,6 @@ router.post("/", authenticateToken, async (req, res) => {
       isRelevant,
       isApproved,
       keyword,
-      keywordRating,
-      keywordOfRating,
     };
   });
 
@@ -430,6 +401,54 @@ router.delete("/:articleId", authenticateToken, async (req, res) => {
     where: { articleId },
   });
   res.json({ result: true, status: `articleId ${articleId} deleted` });
+});
+
+// 🔹 POST /articles/with-ratings - Get articles with ratings
+router.post("/with-ratings", authenticateToken, async (req, res) => {
+  console.log("- POST /articles/with-ratings (SQL version)");
+
+  const {
+    returnOnlyThisPublishedDateOrAfter,
+    limit = 10000,
+    offset = 0,
+  } = req.body;
+
+  let dateCondition = "";
+  if (returnOnlyThisPublishedDateOrAfter) {
+    dateCondition = `WHERE a.publishedDate >= '${returnOnlyThisPublishedDateOrAfter}'`;
+  }
+
+  const sql = `
+    SELECT
+      a.id,
+      a.title,
+      a.description,
+      a.url,
+      a.publishedDate,
+      arc.keyword AS keywordOfRating,
+      arc.keywordRating
+    FROM Articles a
+    LEFT JOIN (
+      SELECT arc1.*
+      FROM ArticleEntityWhoCategorizedArticleContracts arc1
+      JOIN (
+        SELECT articleId, MAX(keywordRating) AS maxRating
+        FROM ArticleEntityWhoCategorizedArticleContracts
+        GROUP BY articleId
+      ) arc2
+      ON arc1.articleId = arc2.articleId AND arc1.keywordRating = arc2.maxRating
+    ) arc
+    ON a.id = arc.articleId
+    ${dateCondition}
+  `;
+
+  try {
+    const [results, metadata] = await sequelize.query(sql);
+    res.json({ articlesArray: results });
+  } catch (error) {
+    console.error("❌ SQL error in /with-ratings:", error);
+    res.status(500).json({ error: "Failed to fetch articles with ratings." });
+  }
 });
 
 module.exports = router;
