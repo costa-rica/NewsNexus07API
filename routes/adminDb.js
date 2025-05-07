@@ -23,6 +23,7 @@ const {
   ArticleIsRelevant,
   NewsApiRequestWebsiteDomainContract,
   WebsiteDomain,
+  ArticleEntityWhoCategorizedArticleContract,
 } = require("newsnexus07db");
 
 const models = {
@@ -48,6 +49,7 @@ const models = {
   ArticleIsRelevant,
   NewsApiRequestWebsiteDomainContract,
   WebsiteDomain,
+  ArticleEntityWhoCategorizedArticleContract,
 };
 
 const fs = require("fs");

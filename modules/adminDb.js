@@ -28,6 +28,7 @@ const {
   ArticleIsRelevant,
   NewsApiRequestWebsiteDomainContract,
   WebsiteDomain,
+  ArticleEntityWhoCategorizedArticleContract,
 } = require("newsnexus07db");
 
 const { promisify } = require("util");
@@ -59,6 +60,7 @@ const models = {
   ArticleIsRelevant,
   NewsApiRequestWebsiteDomainContract,
   WebsiteDomain,
+  ArticleEntityWhoCategorizedArticleContract,
 };
 
 async function readAndAppendDbTables(backupFolderPath) {

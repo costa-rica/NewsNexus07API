@@ -17,6 +17,7 @@ var statesRouter = require("./routes/state");
 var websiteDomainsRouter = require("./routes/websiteDomains");
 var reportsRouter = require("./routes/reports");
 var automationsRouter = require("./routes/newsOrgs/automations");
+var artificialIntelligenceRouter = require("./routes/artificialIntelligence");
 
 var app = express();
 const cors = require("cors");
@@ -40,6 +41,7 @@ app.use("/states", statesRouter);
 app.use("/website-domains", websiteDomainsRouter);
 app.use("/reports", reportsRouter);
 app.use("/automations", automationsRouter);
+app.use("/artificial-intelligence", artificialIntelligenceRouter);
 
 const {
   onStartUpCreateEnvUsers,

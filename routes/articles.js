@@ -10,74 +10,10 @@ const {
   ArticleStateContract,
   ArticleContent,
   ArticleReportContract,
+  ArticleEntityWhoCategorizedArticleContract,
 } = require("newsnexus07db");
 const { checkBodyReturnMissing } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
-
-// // OBE GET /articles: all articles
-// router.get("/", authenticateToken, async (req, res) => {
-//   console.log("- GET /articles");
-//   const articlesArray = await Article.findAll({
-//     include: [
-//       {
-//         model: State,
-//         through: { attributes: [] }, // omit ArticleStateContract from result
-//       },
-//       {
-//         model: ArticleIsRelevant,
-//       },
-//       {
-//         model: ArticleApproved,
-//       },
-//       {
-//         model: NewsApiRequest,
-//         // include: [Keyword],
-//       },
-//     ],
-//   });
-
-//   console.log("- articlesArray.length: ", articlesArray.length);
-//   // make an array of just the articles
-//   const articlesArrayModified = articlesArray.map((article) => {
-//     // create states string
-//     const states = article.States.map((state) => state.name).join(", ");
-//     // create isRelevant boolean: if there is any false isRelevant, return false
-//     const isRelevant =
-//       !article.ArticleIsRelevants ||
-//       article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
-//     // create isApproved boolean: if there is any true isApproved, return true
-//     const isApproved =
-//       article.ArticleApproveds &&
-//       article.ArticleApproveds.some((entry) => entry.userId !== null);
-//     let keyword = null;
-//     if (!keyword) {
-//       let keywordString = "";
-//       if (article.NewsApiRequest?.andString) {
-//         keywordString = `AND ${article.NewsApiRequest?.andString}`;
-//       }
-//       if (article.NewsApiRequest?.orString) {
-//         keywordString += ` OR ${article.NewsApiRequest?.orString}`;
-//       }
-//       if (article.NewsApiRequest?.notString) {
-//         keywordString += ` NOT ${article.NewsApiRequest?.notString}`;
-//       }
-//       keyword = keywordString;
-//     }
-
-//     return {
-//       ...article.dataValues,
-//       states,
-//       isRelevant,
-//       isApproved,
-//       keyword,
-//     };
-//   });
-//   console.log(
-//     "- returning articlesArrayModified.length: ",
-//     articlesArrayModified.length
-//   );
-//   res.json({ articlesArray: articlesArrayModified });
-// });
 
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
@@ -88,11 +24,6 @@ router.post("/", authenticateToken, async (req, res) => {
     returnOnlyIsNotApproved,
     returnOnlyIsRelevant,
   } = req.body;
-  // const {
-  //   returnOnlyThisPublishedDateOrAfter,
-  //   returnApprovedAlso,
-  //   returnNotRelevantAlso,
-  // } = req.body;
 
   const { Op } = require("sequelize");
 
@@ -120,6 +51,9 @@ router.post("/", authenticateToken, async (req, res) => {
       },
       {
         model: NewsApiRequest,
+      },
+      {
+        model: ArticleEntityWhoCategorizedArticleContract,
       },
     ],
   });
@@ -174,12 +108,44 @@ router.post("/", authenticateToken, async (req, res) => {
     if (article.NewsApiRequest?.notString)
       keyword += ` NOT ${article.NewsApiRequest.notString}`;
 
+    // Compute highest keywordRating and corresponding keyword
+    let keywordRating = null;
+    let keywordOfRating = null;
+    if (
+      Array.isArray(article.ArticleEntityWhoCategorizedArticleContracts) &&
+      article.ArticleEntityWhoCategorizedArticleContracts.length > 0
+    ) {
+      let maxObj = article.ArticleEntityWhoCategorizedArticleContracts.reduce(
+        (acc, curr) => {
+          if (
+            typeof curr.keywordRating === "number" &&
+            (acc === null || curr.keywordRating > acc.keywordRating)
+          ) {
+            return curr;
+          }
+          return acc;
+        },
+        null
+      );
+      if (maxObj) {
+        keywordRating = maxObj.keywordRating;
+        keywordOfRating = maxObj.keyword;
+      }
+    }
+
     return {
-      ...article.dataValues,
+      // ...article.dataValues,
+      id: article.id,
+      title: article.title,
+      description: article.description,
+      publishedDate: article.publishedDate,
+      url: article.url,
       states,
       isRelevant,
       isApproved,
       keyword,
+      keywordRating,
+      keywordOfRating,
     };
   });
 
