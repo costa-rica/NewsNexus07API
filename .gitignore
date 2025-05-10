@@ -64,3 +64,4 @@ typings/
 # Nick Added
 .DS_Store
 .env
+test.cjs

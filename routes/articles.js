@@ -407,7 +407,113 @@ router.delete("/:articleId", authenticateToken, async (req, res) => {
 
 // 🔹 POST /articles/with-ratings - Get articles with ratings
 router.post("/with-ratings", authenticateToken, async (req, res) => {
-  console.log("- POST /articles/with-ratings (SQL version)");
+  console.log("- POST /articles/with-ratings");
+
+  const {
+    returnOnlyThisPublishedDateOrAfter,
+    entityWhoCategorizesIdSemantic,
+    entityWhoCategorizesIdZeroShot,
+  } = req.body;
+
+  if (!entityWhoCategorizesIdSemantic) {
+    return res
+      .status(400)
+      .json({ error: "Missing entityWhoCategorizesIdSemantic" });
+  }
+
+  try {
+    // 🔹 Step 1: Get full list of articles as base array
+    const whereClause = {};
+    if (returnOnlyThisPublishedDateOrAfter) {
+      whereClause.publishedDate = {
+        [require("sequelize").Op.gte]: new Date(
+          returnOnlyThisPublishedDateOrAfter
+        ),
+      };
+    }
+
+    const articlesArray = await Article.findAll({
+      where: whereClause,
+      include: [
+        { model: State, through: { attributes: [] } },
+        { model: ArticleIsRelevant },
+        { model: ArticleApproved },
+        { model: NewsApiRequest },
+        { model: ArticleEntityWhoCategorizedArticleContract },
+      ],
+    });
+
+    // 🔹 Step 3: Build final article objects
+    const finalArticles = articlesArray.map((article) => {
+      const states = article.States.map((state) => state.name).join(", ");
+      const isRelevant =
+        !article.ArticleIsRelevants ||
+        article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+      const isApproved =
+        article.ArticleApproveds &&
+        article.ArticleApproveds.some((entry) => entry.userId !== null);
+
+      let semanticRatingMaxLabel = "N/A";
+      let semanticRatingMax = "N/A";
+      let zeroShotRatingMaxLabel = "N/A";
+      let zeroShotRatingMax = "N/A";
+      if (article.ArticleEntityWhoCategorizedArticleContracts?.length > 0) {
+        article.ArticleEntityWhoCategorizedArticleContracts.forEach(
+          (contract) => {
+            if (
+              contract.entityWhoCategorizesId === entityWhoCategorizesIdSemantic
+            ) {
+              semanticRatingMaxLabel = contract.keyword;
+              semanticRatingMax = contract.keywordRating;
+            }
+            if (
+              contract.entityWhoCategorizesId === entityWhoCategorizesIdZeroShot
+            ) {
+              zeroShotRatingMaxLabel = contract.keyword;
+              zeroShotRatingMax = contract.keywordRating;
+            }
+          }
+        );
+      }
+
+      let keyword = "";
+      if (article.NewsApiRequest?.andString)
+        keyword += `AND ${article.NewsApiRequest.andString}`;
+      if (article.NewsApiRequest?.orString)
+        keyword += ` OR ${article.NewsApiRequest.orString}`;
+      if (article.NewsApiRequest?.notString)
+        keyword += ` NOT ${article.NewsApiRequest.notString}`;
+
+      // const rating = ratingMap.get(article.id) || {};
+      // const rating02 = ratingMap02.get(article.id) || {};
+
+      return {
+        id: article.id,
+        title: article.title,
+        description: article.description,
+        publishedDate: article.publishedDate,
+        url: article.url,
+        states,
+        isRelevant,
+        isApproved,
+        keyword,
+        semanticRatingMaxLabel,
+        semanticRatingMax,
+        zeroShotRatingMaxLabel,
+        zeroShotRatingMax,
+      };
+    });
+
+    res.json({ articlesArray: finalArticles });
+  } catch (error) {
+    console.error("❌ Error in /articles/with-ratings:", error);
+    res.status(500).json({ error: "Failed to fetch articles with ratings." });
+  }
+});
+
+// 🔹 POST /articles/with-ratings-sql - Get articles with ratings (SQL version)
+router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
+  console.log("- POST /articles/with-ratings-sql");
 
   const { returnOnlyThisPublishedDateOrAfter, entityWhoCategorizesIdSemantic } =
     req.body;
@@ -514,103 +620,5 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch articles with ratings." });
   }
 });
-// router.post("/with-ratings", authenticateToken, async (req, res) => {
-//   console.log("- POST /articles/with-ratings (SQL version)");
-
-//   const { returnOnlyThisPublishedDateOrAfter, entityWhoCategorizesIdSemantic } =
-//     req.body;
-
-//   console.log(
-//     `entityWhoCategorizesIdSemantic: ${entityWhoCategorizesIdSemantic}`
-//   );
-//   if (!entityWhoCategorizesIdSemantic) {
-//     return res
-//       .status(400)
-//       .json({ error: "Missing entityWhoCategorizesIdSemantic" });
-//   }
-
-//   try {
-//     // const [results, metadata] = await sequelize.query(sql);
-//     // res.json({ articlesArray: results });
-//     const rawArticles =
-//       await createArticlesArrayWithSqlForSemanticKeywordsRating(
-//         entityWhoCategorizesIdSemantic,
-//         returnOnlyThisPublishedDateOrAfter
-//       );
-
-//     // const [rawArticles, metadata] = await sequelize.query(sql);
-//     const articleIds = rawArticles.map((a) => a.id);
-
-//     // Fetch states
-//     const articleStates = await ArticleStateContract.findAll({
-//       where: { articleId: articleIds },
-//       include: [State],
-//     });
-//     const statesByArticle = new Map();
-//     articleStates.forEach((asc) => {
-//       if (!statesByArticle.has(asc.articleId))
-//         statesByArticle.set(asc.articleId, []);
-//       statesByArticle.get(asc.articleId).push(asc.State.name);
-//     });
-
-//     // Fetch relevance
-//     const relevants = await ArticleIsRelevant.findAll({
-//       where: { articleId: articleIds },
-//     });
-//     const relevanceMap = new Map();
-//     relevants.forEach((r) => {
-//       if (!relevanceMap.has(r.articleId)) relevanceMap.set(r.articleId, []);
-//       relevanceMap.get(r.articleId).push(r.isRelevant);
-//     });
-
-//     // Fetch approvals
-//     const approvals = await ArticleApproved.findAll({
-//       where: { articleId: articleIds },
-//     });
-//     const approvalMap = new Map();
-//     approvals.forEach((a) => {
-//       approvalMap.set(a.articleId, true);
-//     });
-
-//     // Fetch NewsApiRequest for keyword info
-//     const articlesWithKeyword = await Article.findAll({
-//       where: { id: articleIds },
-//       include: [{ model: NewsApiRequest }],
-//     });
-//     const keywordMap = new Map();
-//     articlesWithKeyword.forEach((article) => {
-//       let keyword = "";
-//       const req = article.NewsApiRequest;
-//       if (req?.andString) keyword += `AND ${req.andString}`;
-//       if (req?.orString) keyword += ` OR ${req.orString}`;
-//       if (req?.notString) keyword += ` NOT ${req.notString}`;
-//       keywordMap.set(article.id, keyword);
-//     });
-
-//     // Combine everything into final results
-//     const finalArticles = rawArticles.map((article) => {
-//       const states = statesByArticle.get(article.id) || [];
-//       const relevanceValues = relevanceMap.get(article.id);
-//       const isRelevant =
-//         relevanceValues === undefined ||
-//         relevanceValues.every((val) => val !== false);
-//       const isApproved = approvalMap.has(article.id);
-//       const keyword = keywordMap.get(article.id) || "";
-
-//       return {
-//         ...article,
-//         states: states.join(", "),
-//         isRelevant,
-//         isApproved,
-//         keyword,
-//       };
-//     });
-
-//     res.json({ articlesArray: finalArticles });
-//   } catch (error) {
-//     console.error("❌ SQL error in /with-ratings:", error);
-//     res.status(500).json({ error: "Failed to fetch articles with ratings." });
-//   }
-// });
 
 module.exports = router;
