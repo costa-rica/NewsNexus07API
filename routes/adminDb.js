@@ -213,6 +213,10 @@ router.get("/db-row-counts-by-table", authenticateToken, async (req, res) => {
       }
     }
 
+    // sort arrayRowCountsByTable by tableName
+    arrayRowCountsByTable.sort((a, b) =>
+      a.tableName.localeCompare(b.tableName)
+    );
     // console.log(`Database row counts by table:`, arrayRowCountsByTable);
     res.json({ result: true, arrayRowCountsByTable });
   } catch (error) {

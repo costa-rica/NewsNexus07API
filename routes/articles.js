@@ -12,6 +12,7 @@ const {
   ArticleContent,
   ArticleReportContract,
   ArticleEntityWhoCategorizedArticleContract,
+  ArtificialIntelligence,
 } = require("newsnexus07db");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
@@ -411,14 +412,33 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
 
   const {
     returnOnlyThisPublishedDateOrAfter,
-    entityWhoCategorizesIdSemantic,
-    entityWhoCategorizesIdZeroShot,
+    semanticScorerEntityName,
+    zeroShotScorerEntityName,
   } = req.body;
 
-  if (!entityWhoCategorizesIdSemantic) {
-    return res
-      .status(400)
-      .json({ error: "Missing entityWhoCategorizesIdSemantic" });
+  let semanticScorerEntityId;
+  let zeroShotScorerEntityId;
+
+  if (semanticScorerEntityName) {
+    const semanticScorerEntityObj = await ArtificialIntelligence.findOne({
+      where: { name: semanticScorerEntityName },
+    });
+    semanticScorerEntityId = semanticScorerEntityObj.id;
+  } else {
+    console.log(
+      `semanticScorerEntityName: ${semanticScorerEntityName} not found`
+    );
+  }
+
+  if (zeroShotScorerEntityName) {
+    const zeroShotScorerEntityObj = await ArtificialIntelligence.findOne({
+      where: { name: zeroShotScorerEntityName },
+    });
+    zeroShotScorerEntityId = zeroShotScorerEntityObj.id;
+  } else {
+    console.log(
+      `zeroShotScorerEntityName: ${zeroShotScorerEntityName} not found`
+    );
   }
 
   try {
@@ -443,7 +463,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       ],
     });
 
-    // 🔹 Step 3: Build final article objects
+    // 🔹 Step 2: Build final article objects
     const finalArticles = articlesArray.map((article) => {
       const states = article.States.map((state) => state.name).join(", ");
       const isRelevant =
@@ -457,20 +477,19 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       let semanticRatingMax = "N/A";
       let zeroShotRatingMaxLabel = "N/A";
       let zeroShotRatingMax = "N/A";
+
       if (article.ArticleEntityWhoCategorizedArticleContracts?.length > 0) {
         article.ArticleEntityWhoCategorizedArticleContracts.forEach(
           (contract) => {
-            if (
-              contract.entityWhoCategorizesId === entityWhoCategorizesIdSemantic
-            ) {
+            if (contract.entityWhoCategorizesId === semanticScorerEntityId) {
               semanticRatingMaxLabel = contract.keyword;
               semanticRatingMax = contract.keywordRating;
             }
-            if (
-              contract.entityWhoCategorizesId === entityWhoCategorizesIdZeroShot
-            ) {
-              zeroShotRatingMaxLabel = contract.keyword;
-              zeroShotRatingMax = contract.keywordRating;
+            if (zeroShotScorerEntityId) {
+              if (contract.entityWhoCategorizesId === zeroShotScorerEntityId) {
+                zeroShotRatingMaxLabel = contract.keyword;
+                zeroShotRatingMax = contract.keywordRating;
+              }
             }
           }
         );
@@ -483,9 +502,6 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         keyword += ` OR ${article.NewsApiRequest.orString}`;
       if (article.NewsApiRequest?.notString)
         keyword += ` NOT ${article.NewsApiRequest.notString}`;
-
-      // const rating = ratingMap.get(article.id) || {};
-      // const rating02 = ratingMap02.get(article.id) || {};
 
       return {
         id: article.id,
