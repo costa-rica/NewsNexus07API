@@ -83,8 +83,8 @@ router.post("/request", async (req, res) => {
   }
 });
 
-// 🔹 POST /news-api/detailed-news-api
-router.post("/detailed-news-api", async (req, res) => {
+// 🔹 POST /news-api/get-articles [OBE: POST /news-api/detailed-news-api]
+router.post("/get-articles", async (req, res) => {
   const {
     startDate,
     endDate,

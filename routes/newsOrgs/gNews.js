@@ -75,8 +75,8 @@ router.post("/request", async (req, res) => {
   }
 });
 
-// 🔹 POST /gnews/request-detailed
-router.post("/request-detailed", async (req, res) => {
+// 🔹 POST /gnews/get-articles [OBE: POST /gnews/request-detailed]
+router.post("/get-articles", async (req, res) => {
   const { startDate, endDate, keywordsAnd, keywordsOr, keywordsNot } = req.body;
   // Step 1: find NewsArticleAggregatorSource
   const gNewsSourceObj = await NewsArticleAggregatorSource.findOne({
