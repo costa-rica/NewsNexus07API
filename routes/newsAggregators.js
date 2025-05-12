@@ -167,4 +167,57 @@ router.get("/news-org-apis", authenticateToken, async (req, res) => {
   }
   res.json({ newsOrgArray });
 });
+
+// 🔹 POST /update/:newsArticleAggregatorSourceId: Update News Article Aggregator Source (PATCH-like behavior)
+router.post(
+  "/update/:newsArticleAggregatorSourceId",
+  authenticateToken, // Ensure the user is authenticated
+  async (req, res) => {
+    const { newsArticleAggregatorSourceId } = req.params;
+    const { nameOfOrg, url, apiKey, state, isApi, isRss } = req.body;
+
+    console.log(
+      `Updating news article aggregator source ${newsArticleAggregatorSourceId}`
+    );
+
+    // Find the user by ID
+    const newsArticleAggregatorSource =
+      await NewsArticleAggregatorSource.findByPk(newsArticleAggregatorSourceId);
+    if (!newsArticleAggregatorSource) {
+      return res
+        .status(404)
+        .json({ error: "News article aggregator source not found" });
+    }
+
+    // Prepare update object (only include non-null fields)
+    const updatedFields = {};
+    if (nameOfOrg) updatedFields.nameOfOrg = nameOfOrg;
+    if (url) updatedFields.url = url;
+    if (apiKey) updatedFields.apiKey = apiKey;
+    if (state) updatedFields.state = state;
+    if (typeof isApi === "boolean") {
+      updatedFields.isApi = isApi;
+    }
+    if (typeof isRss === "boolean") {
+      updatedFields.isRss = isRss;
+    }
+
+    // Perform the update if there are fields to update
+    if (Object.keys(updatedFields).length > 0) {
+      await newsArticleAggregatorSource.update(updatedFields);
+      console.log(
+        `News article aggregator source ${newsArticleAggregatorSourceId} updated successfully`
+      );
+    } else {
+      console.log(
+        `No updates applied for news article aggregator source ${newsArticleAggregatorSourceId}`
+      );
+    }
+
+    res
+      .status(200)
+      .json({ message: "Mise à jour réussie.", newsArticleAggregatorSource });
+  }
+);
+
 module.exports = router;
