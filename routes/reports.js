@@ -7,7 +7,7 @@ const {
   State,
   ArticleReportContract,
 } = require("newsnexus07db");
-const { checkBodyReturnMissing } = require("../modules/common");
+const { convertUtcDateObjToEasternDateObj } = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
   createCsvForReport,
@@ -87,7 +87,10 @@ router.post("/create", authenticateToken, async (req, res) => {
   //   );
   // }
 
-  const datePrefix = new Date().toISOString().slice(2, 10).replace(/-/g, ""); // YYMMDD
+  const datePrefixET = convertUtcDateObjToEasternDateObj(new Date())
+    .toISOString()
+    .slice(2, 10)
+    .replace(/-/g, ""); // YYMMDD
   // let approvedArticlesObjArrayModified = approvedArticlesObjArray.map(
   let approvedArticlesObjArrayModified = [];
 
@@ -101,7 +104,7 @@ router.post("/create", authenticateToken, async (req, res) => {
     });
 
     const counter = String(i + 1).padStart(3, "0"); // 001, 002, ...
-    article.refNumber = `${datePrefix}${counter}`; // e.g., 250418001
+    article.refNumber = `${datePrefixET}${counter}`; // e.g., 250418001
     let state;
     if (article.States?.length > 0) {
       state = article.States[0].abbreviation;
@@ -110,18 +113,23 @@ router.post("/create", authenticateToken, async (req, res) => {
     console.log(
       `article.ArticleApproveds.length: ${article.ArticleApproveds.length}`
     );
-
-    approvedArticlesObjArrayModified.push({
-      refNumber: article.refNumber,
-      submitted: new Date().toISOString().slice(0, 10),
-      headline: article.ArticleApproveds[0].headlineForPdfReport,
-      publication: article.ArticleApproveds[0].publicationNameForPdfReport,
-      datePublished: article.ArticleApproveds[0].publicationDateForPdfReport,
-      state,
-      text: article.ArticleApproveds[0].textForPdfReport,
-    });
+    try {
+      approvedArticlesObjArrayModified.push({
+        refNumber: article.refNumber,
+        submitted: new Date().toISOString().slice(0, 10),
+        headline: article.ArticleApproveds[0].headlineForPdfReport,
+        publication: article.ArticleApproveds[0].publicationNameForPdfReport,
+        datePublished: article.ArticleApproveds[0].publicationDateForPdfReport,
+        state,
+        text: article.ArticleApproveds[0].textForPdfReport,
+      });
+    } catch (error) {
+      console.log(`Error processing article id ${article.id}: ${error}`);
+      return res
+        .status(500)
+        .json({ error: `Error processing article id ${article.id}: ${error}` });
+    }
   }
-
   console.log(`finished loops`);
 
   // step 2: create a csv file and save to PATH_PROJECT_RESOURCES_REPORTS
@@ -144,7 +152,9 @@ router.post("/create", authenticateToken, async (req, res) => {
 
     res.json({ message: "CSV created", zipFilename });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: `Error creating report occurred on article id ${article.id}: ${error.message}`,
+    });
   }
 });
 

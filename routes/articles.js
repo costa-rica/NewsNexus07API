@@ -18,7 +18,11 @@ const { authenticateToken } = require("../modules/userAuthentication");
 const {
   createArticlesArrayWithSqlForSemanticKeywordsRating,
 } = require("../modules/articles");
-
+const {
+  convertUtcDateOrStringToEasternString,
+  getMostRecentEasternFriday,
+} = require("../modules/common");
+const { DateTime } = require("luxon");
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
   console.log("- POST /articles");
@@ -181,7 +185,7 @@ router.get("/approved", authenticateToken, async (req, res) => {
   res.json({ articlesArray: articlesArrayModified });
 });
 
-// 🔹 GET /is-not-relevant/:articleId
+// 🔹 POST /articles/user-toggle-is-not-relevant/:articleId
 router.post(
   "/user-toggle-is-not-relevant/:articleId",
   authenticateToken,
@@ -212,7 +216,7 @@ router.post(
   }
 );
 
-// 🔹 GET /get-approved/:articleId
+// 🔹 GET /articles/get-approved/:articleId
 router.get("/get-approved/:articleId", authenticateToken, async (req, res) => {
   const { articleId } = req.params;
   const articleApproved = await ArticleApproved.findOne({
@@ -243,7 +247,7 @@ router.get("/get-approved/:articleId", authenticateToken, async (req, res) => {
   });
 });
 
-// 🔹 GET /approve/:articleId
+// 🔹 POST /articles/approve/:articleId
 router.post("/approve/:articleId", authenticateToken, async (req, res) => {
   const { articleId } = req.params;
   const {
@@ -274,7 +278,7 @@ router.post("/approve/:articleId", authenticateToken, async (req, res) => {
   res.json({ result: true, status: `articleId ${articleId} is approved` });
 });
 
-// 🔹 GET /summary-statistics
+// 🔹 GET /articles/summary-statistics
 router.get("/summary-statistics", authenticateToken, async (req, res) => {
   const articlesArray = await Article.findAll({
     include: [
@@ -294,6 +298,14 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
   let articlesIsRelevantCount = 0;
   let articlesIsApprovedCount = 0;
   let hasStateAssigned = 0;
+  const yesterdayEastCoastDateStr = DateTime.now()
+    .setZone("America/New_York")
+    .minus({ days: 1 })
+    .toISODate(); // e.g. "2025-05-12"
+  let addedYesterday = 0;
+  const lastFridayEastern = getMostRecentEasternFriday();
+  let approvedThisWeek = 0;
+  console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
 
   articlesArray.map((article) => {
     articlesCount++;
@@ -306,6 +318,25 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.States.length > 0) {
       hasStateAssigned++;
     }
+    const articleDateStr = convertUtcDateOrStringToEasternString(
+      article.createdAt
+    ).split(" ")[0];
+    if (articleDateStr === yesterdayEastCoastDateStr) {
+      addedYesterday++;
+    }
+    if (
+      article.ArticleApproveds.some((entry) => {
+        const approvalDate = DateTime.fromJSDate(entry.createdAt, {
+          zone: "utc",
+        }).setZone("America/New_York");
+        return (
+          approvalDate >=
+          DateTime.fromJSDate(lastFridayEastern, { zone: "America/New_York" })
+        );
+      })
+    ) {
+      approvedThisWeek++;
+    }
   });
 
   const summaryStatistics = {
@@ -313,6 +344,8 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     articlesIsRelevantCount,
     articlesIsApprovedCount,
     hasStateAssigned,
+    addedYesterday,
+    approvedThisWeek,
   };
   res.json({ summaryStatistics });
 });

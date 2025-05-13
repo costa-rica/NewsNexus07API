@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { DateTime } = require("luxon");
 function checkBody(body, keys) {
   let isValid = true;
 
@@ -98,38 +99,36 @@ function writeResponseDataFromNewsAggregator(
   );
 }
 
-// function writeResponseDataFromNewsAggregator(
-//   NewsArticleAggregatorSourceId,
-//   newsApiRequest,
-//   requestResponseData,
-//   prefix = false
-// ) {
-//   const formattedDate = new Date()
-//     .toISOString()
-//     .split("T")[0]
-//     .replace(/-/g, "");
-//   const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
-//   let responseFilename;
-//   if (prefix) {
-//     responseFilename = `failedToSave${formattedDate}apiId${NewsArticleAggregatorSourceId}requestId${newsApiRequest.id}.json`;
-//   } else {
-//     responseFilename = `${formattedDate}apiId${NewsArticleAggregatorSourceId}requestId${newsApiRequest.id}.json`;
-//   }
-//   const responseFilePath = path.join(responseDir, responseFilename);
-//   let jsonToStore = requestResponseData;
-//   if (newsApiRequest.url) {
-//     jsonToStore.requestUrl = newsApiRequest.url;
-//   }
-//   fs.writeFileSync(
-//     responseFilePath,
-//     JSON.stringify(jsonToStore, null, 2),
-//     "utf-8"
-//   );
-// }
+// Returns string formatted in Eastern Time
+function convertUtcDateOrStringToEasternString(input) {
+  let dt;
+  if (typeof input === "string") {
+    dt = DateTime.fromISO(input, { zone: "utc" });
+  } else if (input instanceof Date) {
+    dt = DateTime.fromJSDate(input, { zone: "utc" });
+  } else {
+    return "Invalid";
+  }
 
+  return dt.setZone("America/New_York").toFormat("yyyy-MM-dd HH:mm");
+}
+function convertUtcDateObjToEasternDateObj(utcDateObj) {
+  return DateTime.fromJSDate(utcDateObj, { zone: "utc" }) // Start from UTC
+    .setZone("America/New_York") // Convert to ET
+    .toJSDate(); // Return a regular Date object (in ET)
+}
+
+function getMostRecentEasternFriday() {
+  const now = DateTime.now().setZone("America/New_York");
+  const daysSinceFriday = (now.weekday + 1) % 7; // Luxon weekday: Mon=1...Sun=7
+  return now.minus({ days: daysSinceFriday }).startOf("day").toJSDate();
+}
 module.exports = {
   checkBody,
   checkBodyReturnMissing,
   writeRequestArgs,
   writeResponseDataFromNewsAggregator,
+  convertUtcDateOrStringToEasternString,
+  convertUtcDateObjToEasternDateObj,
+  getMostRecentEasternFriday,
 };

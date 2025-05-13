@@ -14,8 +14,8 @@ async function createXlsxForReport(dataArray) {
     );
   }
   try {
-    const now = new Date();
-    const timestamp = now
+    const nowET = convertUtcDateObjToEasternDateObj(new Date());
+    const timestamp = nowET
       .toISOString()
       .replace(/[-:]/g, "")
       .replace("T", "-")
@@ -78,8 +78,8 @@ function createCsvForReport(dataArray) {
     );
   }
 
-  const now = new Date();
-  const timestamp = now
+  const nowET = convertUtcDateObjToEasternDateObj(new Date());
+  const timestamp = nowET
     .toISOString()
     .replace(/[-:]/g, "")
     .replace("T", "-")
@@ -145,7 +145,7 @@ function createReportZipFile(csvFilename, zipFilename) {
 
   const pdfDir = path.join(outputDir, "article_pdfs");
 
-  const now = new Date();
+  // const now = new Date();
   // const timestamp = now
   //   .toISOString()
   //   .replace(/[-:]/g, "")
