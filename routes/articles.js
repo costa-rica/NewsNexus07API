@@ -1,7 +1,6 @@
 var express = require("express");
 var router = express.Router();
 const {
-  sequelize,
   Article,
   State,
   ArticleIsRelevant,
@@ -13,6 +12,7 @@ const {
   ArticleReportContract,
   ArticleEntityWhoCategorizedArticleContract,
   ArtificialIntelligence,
+  ArticleReviewed,
 } = require("newsnexus07db");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
@@ -493,6 +493,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         { model: ArticleApproved },
         { model: NewsApiRequest },
         { model: ArticleEntityWhoCategorizedArticleContract },
+        { model: ArticleReviewed },
       ],
     });
 
@@ -506,6 +507,13 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         article.ArticleApproveds &&
         article.ArticleApproveds.some((entry) => entry.userId !== null);
 
+      let keyword = "";
+      if (article.NewsApiRequest?.andString)
+        keyword += `AND ${article.NewsApiRequest.andString}`;
+      if (article.NewsApiRequest?.orString)
+        keyword += ` OR ${article.NewsApiRequest.orString}`;
+      if (article.NewsApiRequest?.notString)
+        keyword += ` NOT ${article.NewsApiRequest.notString}`;
       let semanticRatingMaxLabel = "N/A";
       let semanticRatingMax = "N/A";
       let zeroShotRatingMaxLabel = "N/A";
@@ -528,13 +536,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         );
       }
 
-      let keyword = "";
-      if (article.NewsApiRequest?.andString)
-        keyword += `AND ${article.NewsApiRequest.andString}`;
-      if (article.NewsApiRequest?.orString)
-        keyword += ` OR ${article.NewsApiRequest.orString}`;
-      if (article.NewsApiRequest?.notString)
-        keyword += ` NOT ${article.NewsApiRequest.notString}`;
+      const isBeingReviewed = article.ArticleRevieweds?.length > 0;
 
       return {
         id: article.id,
@@ -552,6 +554,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         semanticRatingMax,
         zeroShotRatingMaxLabel,
         zeroShotRatingMax,
+        isBeingReviewed,
       };
     });
 
@@ -561,6 +564,76 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch articles with ratings." });
   }
 });
+
+// 🔹 POST /articles/is-being-reviewed/:articleId
+router.post(
+  "/is-being-reviewed/:articleId",
+  authenticateToken,
+  async (req, res) => {
+    const { articleId } = req.params;
+    const { isBeingReviewed } = req.body;
+    const user = req.user;
+
+    console.log(`articleId ${articleId}: ${isBeingReviewed}`);
+
+    if (isBeingReviewed) {
+      // Create or update the record
+      await ArticleReviewed.upsert({
+        articleId: articleId,
+        userId: user.id,
+      });
+      return res.json({
+        result: true,
+        status: `articleId ${articleId} IS being reviewed`,
+      });
+    } else {
+      // Remove the record if it exists
+      await ArticleReviewed.destroy({
+        where: { articleId },
+      });
+      return res.json({
+        result: true,
+        status: `articleId ${articleId} IS NOT being reviewed`,
+      });
+    }
+  }
+);
+// // 🔹 POST /articles/is-being-reviewed/:articleId
+// router.post(
+//   "/is-being-reviewed/:articleId",
+//   authenticateToken,
+//   async (req, res) => {
+//     const { articleId } = req.params;
+//     const { isBeingReviewed } = req.body;
+
+//     console.log(`articleId ${articleId}: ${isBeingReviewed}`);
+
+//     const user = req.user;
+
+//     const existingRecord = await ArticleReviewed.findOne({
+//       where: { articleId },
+//     });
+
+//     if (existingRecord) {
+//       await existingRecord.destroy({
+//         where: { articleId },
+//       });
+//       return res.json({
+//         result: true,
+//         status: `articleId ${articleId} IS NOT being reviewed`,
+//       });
+//     } else {
+//       await ArticleReviewed.create({
+//         articleId: articleId,
+//         userId: user.id,
+//       });
+//       return res.json({
+//         result: true,
+//         status: `articleId ${articleId} IS being reviewed`,
+//       });
+//     }
+//   }
+// );
 
 // 🔹 POST /articles/with-ratings-sql - Get articles with ratings (SQL version)
 router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
