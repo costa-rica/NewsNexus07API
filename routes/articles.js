@@ -97,7 +97,9 @@ router.post("/", authenticateToken, async (req, res) => {
   );
 
   const articlesArrayModified = articlesArrayFiltered.map((article) => {
-    const states = article.States.map((state) => state.name).join(", ");
+    const statesStringCommaSeparated = article.States.map(
+      (state) => state.name
+    ).join(", ");
     const isRelevant =
       !article.ArticleIsRelevants ||
       article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
@@ -120,7 +122,8 @@ router.post("/", authenticateToken, async (req, res) => {
       description: article.description,
       publishedDate: article.publishedDate,
       url: article.url,
-      states,
+      statesStringCommaSeparated,
+      States: article.States,
       isRelevant,
       isApproved,
       keyword,
@@ -160,11 +163,11 @@ router.get("/approved", authenticateToken, async (req, res) => {
     if (article.ArticleApproveds && article.ArticleApproveds.length > 0) {
       return true;
     }
-
     return false;
   });
 
   const articlesArrayModified = articlesArrayFiltered.map((article) => {
+    // const states = article.States.map((state) => state.name).join(", ");
     return {
       ...article.dataValues,
       isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
@@ -237,13 +240,17 @@ router.get("/get-approved/:articleId", authenticateToken, async (req, res) => {
     ],
   });
   if (!articleApproved) {
-    return res.json({ articleIsApproved: false, article: {} });
+    return res.json({
+      articleIsApproved: false,
+      article: {},
+    });
   }
 
   res.json({
     articleIsApproved: true,
     article: articleApproved.Article,
     content: articleApproved.textForPdfReport,
+    States: articleApproved.Article.States,
   });
 });
 
@@ -499,7 +506,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
 
     // 🔹 Step 2: Build final article objects
     const finalArticles = articlesArray.map((article) => {
-      const states = article.States.map((state) => state.name).join(", ");
+      const statesStringCommaSeparated = article.States.map(
+        (state) => state.name
+      ).join(", ");
       const isRelevant =
         !article.ArticleIsRelevants ||
         article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
@@ -546,7 +555,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         publicationName: article.publicationName,
         url: article.url,
         States: article.States,
-        states,
+        statesStringCommaSeparated,
         isRelevant,
         isApproved,
         keyword,
