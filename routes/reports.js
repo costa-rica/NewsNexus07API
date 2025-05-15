@@ -153,7 +153,7 @@ router.post("/create", authenticateToken, async (req, res) => {
     res.json({ message: "CSV created", zipFilename });
   } catch (error) {
     res.status(500).json({
-      error: `Error creating report occurred on article id ${article.id}: ${error.message}`,
+      error: `Error creating report: ${error.message}`,
     });
   }
 });

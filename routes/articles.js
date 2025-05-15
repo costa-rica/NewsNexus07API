@@ -608,42 +608,6 @@ router.post(
     }
   }
 );
-// // 🔹 POST /articles/is-being-reviewed/:articleId
-// router.post(
-//   "/is-being-reviewed/:articleId",
-//   authenticateToken,
-//   async (req, res) => {
-//     const { articleId } = req.params;
-//     const { isBeingReviewed } = req.body;
-
-//     console.log(`articleId ${articleId}: ${isBeingReviewed}`);
-
-//     const user = req.user;
-
-//     const existingRecord = await ArticleReviewed.findOne({
-//       where: { articleId },
-//     });
-
-//     if (existingRecord) {
-//       await existingRecord.destroy({
-//         where: { articleId },
-//       });
-//       return res.json({
-//         result: true,
-//         status: `articleId ${articleId} IS NOT being reviewed`,
-//       });
-//     } else {
-//       await ArticleReviewed.create({
-//         articleId: articleId,
-//         userId: user.id,
-//       });
-//       return res.json({
-//         result: true,
-//         status: `articleId ${articleId} IS being reviewed`,
-//       });
-//     }
-//   }
-// );
 
 // 🔹 POST /articles/with-ratings-sql - Get articles with ratings (SQL version)
 router.post("/with-ratings-sql", authenticateToken, async (req, res) => {

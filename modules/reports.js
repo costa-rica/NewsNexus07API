@@ -4,6 +4,7 @@ const { Parser } = require("json2csv");
 const PDFDocument = require("pdfkit");
 const archiver = require("archiver");
 const ExcelJS = require("exceljs");
+const { convertUtcDateObjToEasternDateObj } = require("./common");
 
 async function createXlsxForReport(dataArray) {
   console.log(` 🔹 createXlsxForReport`);
