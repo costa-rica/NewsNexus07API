@@ -13,6 +13,7 @@ const {
   ArticleEntityWhoCategorizedArticleContract,
   ArtificialIntelligence,
   ArticleReviewed,
+  NewsArticleAggregatorSource,
 } = require("newsnexus07db");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
@@ -501,7 +502,14 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         { model: State, through: { attributes: [] } },
         { model: ArticleIsRelevant },
         { model: ArticleApproved },
-        { model: NewsApiRequest },
+        {
+          model: NewsApiRequest,
+          include: [
+            {
+              model: NewsArticleAggregatorSource,
+            },
+          ],
+        },
         { model: ArticleEntityWhoCategorizedArticleContract },
         { model: ArticleReviewed },
       ],
@@ -531,6 +539,10 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       return true;
     });
 
+    // console.log(
+    //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
+    // );
+
     // 🔹 Step 3: Build final article objects
     // const finalArticles = articlesArray.map((article) => {
     const finalArticles = articlesArrayFiltered.map((article) => {
@@ -544,13 +556,21 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         article.ArticleApproveds &&
         article.ArticleApproveds.some((entry) => entry.userId !== null);
 
-      let keyword = "";
+      // let keyword = "";
+      let requestQueryString = "";
       if (article.NewsApiRequest?.andString)
-        keyword += `AND ${article.NewsApiRequest.andString}`;
+        requestQueryString += `AND ${article.NewsApiRequest.andString}`;
       if (article.NewsApiRequest?.orString)
-        keyword += ` OR ${article.NewsApiRequest.orString}`;
+        requestQueryString += ` OR ${article.NewsApiRequest.orString}`;
       if (article.NewsApiRequest?.notString)
-        keyword += ` NOT ${article.NewsApiRequest.notString}`;
+        requestQueryString += ` NOT ${article.NewsApiRequest.notString}`;
+
+      let nameOfOrg = "";
+      if (article.NewsApiRequest?.NewsArticleAggregatorSource?.nameOfOrg) {
+        nameOfOrg =
+          article.NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg;
+      }
+
       let semanticRatingMaxLabel = "N/A";
       let semanticRatingMax = "N/A";
       let zeroShotRatingMaxLabel = "N/A";
@@ -586,7 +606,8 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         statesStringCommaSeparated,
         isRelevant,
         isApproved,
-        keyword,
+        requestQueryString,
+        nameOfOrg,
         semanticRatingMaxLabel,
         semanticRatingMax,
         zeroShotRatingMaxLabel,
