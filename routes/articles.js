@@ -455,6 +455,8 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     returnOnlyThisPublishedDateOrAfter,
     semanticScorerEntityName,
     zeroShotScorerEntityName,
+    returnOnlyIsNotApproved,
+    returnOnlyIsRelevant,
   } = req.body;
 
   let semanticScorerEntityId;
@@ -465,10 +467,6 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       where: { name: semanticScorerEntityName },
     });
     semanticScorerEntityId = semanticScorerEntityObj.id;
-  } else {
-    console.log(
-      `semanticScorerEntityName: ${semanticScorerEntityName} not found`
-    );
   }
 
   if (zeroShotScorerEntityName) {
@@ -476,12 +474,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       where: { name: zeroShotScorerEntityName },
     });
     zeroShotScorerEntityId = zeroShotScorerEntityObj.id;
-  } else {
-    console.log(
-      `zeroShotScorerEntityName: ${zeroShotScorerEntityName} not found`
-    );
   }
-
   try {
     // 🔹 Step 1: Get full list of articles as base array
     const whereClause = {};
@@ -505,8 +498,33 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       ],
     });
 
-    // 🔹 Step 2: Build final article objects
-    const finalArticles = articlesArray.map((article) => {
+    // Step 2: Filter articles
+    // Filter in JavaScript based on related tables
+    const articlesArrayFiltered = articlesArray.filter((article) => {
+      // Filter out not approved if requested
+      if (
+        returnOnlyIsNotApproved &&
+        article.ArticleApproveds &&
+        article.ArticleApproveds.length > 0
+      ) {
+        return false;
+      }
+
+      // Filter out not relevant if requested
+      if (
+        returnOnlyIsRelevant &&
+        article.ArticleIsRelevants &&
+        article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // 🔹 Step 3: Build final article objects
+    // const finalArticles = articlesArray.map((article) => {
+    const finalArticles = articlesArrayFiltered.map((article) => {
       const statesStringCommaSeparated = article.States.map(
         (state) => state.name
       ).join(", ");
@@ -613,8 +631,12 @@ router.post(
 router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
   console.log("- POST /articles/with-ratings-sql");
 
-  const { returnOnlyThisPublishedDateOrAfter, entityWhoCategorizesIdSemantic } =
-    req.body;
+  const {
+    returnOnlyThisPublishedDateOrAfter,
+    entityWhoCategorizesIdSemantic,
+    returnOnlyIsNotApproved,
+    returnOnlyIsRelevant,
+  } = req.body;
 
   if (!entityWhoCategorizesIdSemantic) {
     return res
@@ -643,9 +665,30 @@ router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
       ],
     });
 
-    const articleIds = articlesArray.map((a) => a.id);
+    // Filter in JavaScript based on related tables
+    const articlesArrayFiltered = articlesArray.filter((article) => {
+      // Filter out not approved if requested
+      if (
+        returnOnlyIsNotApproved &&
+        article.ArticleApproveds &&
+        article.ArticleApproveds.length > 0
+      ) {
+        return false;
+      }
 
-    // 🔹 Step 2: Get keywordRating and keywordOfRating per article
+      // Filter out not relevant if requested
+      if (
+        returnOnlyIsRelevant &&
+        article.ArticleIsRelevants &&
+        article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // 🔹 Step 3: Get keywordRating and keywordOfRating per article
     const ratedArticles =
       await createArticlesArrayWithSqlForSemanticKeywordsRating(
         entityWhoCategorizesIdSemantic,
@@ -660,7 +703,7 @@ router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
       });
     });
 
-    // 🔹 Step 2.1: Get zero-shot ratings
+    // 🔹 Step 3.1: Get zero-shot ratings
     const ratedArticles02 =
       await createArticlesArrayWithSqlForSemanticKeywordsRating(
         2,
@@ -674,8 +717,9 @@ router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
       });
     });
 
-    // 🔹 Step 3: Build final article objects
-    const finalArticles = articlesArray.map((article) => {
+    // 🔹 Step 4: Build final article objects
+    // const finalArticles = articlesArray.map((article) => {
+    const finalArticles = articlesArrayFiltered.map((article) => {
       const states = article.States.map((state) => state.name).join(", ");
       const isRelevant =
         !article.ArticleIsRelevants ||
