@@ -453,6 +453,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
 
   const {
     returnOnlyThisPublishedDateOrAfter,
+    returnOnlyThisCreatedAtDateOrAfter,
     semanticScorerEntityName,
     zeroShotScorerEntityName,
     returnOnlyIsNotApproved,
@@ -482,6 +483,14 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       whereClause.publishedDate = {
         [require("sequelize").Op.gte]: new Date(
           returnOnlyThisPublishedDateOrAfter
+        ),
+      };
+    }
+
+    if (returnOnlyThisCreatedAtDateOrAfter) {
+      whereClause.createdAt = {
+        [require("sequelize").Op.gte]: new Date(
+          returnOnlyThisCreatedAtDateOrAfter
         ),
       };
     }
