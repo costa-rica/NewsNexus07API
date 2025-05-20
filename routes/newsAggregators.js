@@ -16,6 +16,8 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
   const { nameOfOrg, url, apiKey, state, isApi, isRss } = req.body;
   const { isValid, missingKeys } = checkBodyReturnMissing(req.body, ["url"]);
 
+  console.log(`body: ${JSON.stringify(req.body)}`);
+
   if (!isValid) {
     return res.status(400).json({ error: `Missing ${missingKeys.join(", ")}` });
   }
@@ -217,6 +219,36 @@ router.post(
     res
       .status(200)
       .json({ message: "Mise à jour réussie.", newsArticleAggregatorSource });
+  }
+);
+
+// 🔹 DELETE /news-aggregators/:newsArticleAggregatorSourceId: Delete News Article Aggregator Source
+router.delete(
+  "/:newsArticleAggregatorSourceId",
+  authenticateToken, // Ensure the user is authenticated
+  async (req, res) => {
+    const { newsArticleAggregatorSourceId } = req.params;
+
+    console.log(
+      `Deleting news article aggregator source ${newsArticleAggregatorSourceId}`
+    );
+
+    // Find the user by ID
+    const newsArticleAggregatorSource =
+      await NewsArticleAggregatorSource.findByPk(newsArticleAggregatorSourceId);
+    if (!newsArticleAggregatorSource) {
+      return res
+        .status(404)
+        .json({ error: "News article aggregator source not found" });
+    }
+
+    // Perform the delete
+    await newsArticleAggregatorSource.destroy();
+    console.log(
+      `News article aggregator source ${newsArticleAggregatorSourceId} deleted successfully`
+    );
+
+    res.status(200).json({ message: "Suppression réussie." });
   }
 );
 
