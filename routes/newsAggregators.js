@@ -34,8 +34,8 @@ router.post("/add-aggregator", authenticateToken, async (req, res) => {
     url,
     apiKey,
     state,
-    isApi: isApi === "true",
-    isRss: isRss === "true",
+    isApi,
+    isRss,
   });
 
   // Create EntityWhoFoundArticle record for the admin user
