@@ -29,10 +29,18 @@ async function createXlsxForReport(dataArray) {
     console.log(`filename: ${fileName}`);
     const columns = [
       { header: "Ref #", key: "refNumber", width: 15 },
-      { header: "Submitted", key: "submitted", width: 15 },
+      {
+        header: "Submitted",
+        key: "submitted",
+        width: 15,
+      },
       { header: "Headline", key: "headline", width: 40 },
       { header: "Publication", key: "publication", width: 30 },
-      { header: "Date", key: "datePublished", width: 15 },
+      {
+        header: "Date",
+        key: "datePublished",
+        width: 15,
+      },
       { header: "State", key: "state", width: 10 },
       { header: "Text", key: "text", width: 80 },
     ];

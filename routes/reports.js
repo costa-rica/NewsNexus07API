@@ -110,16 +110,23 @@ router.post("/create", authenticateToken, async (req, res) => {
       state = article.States[0].abbreviation;
     }
 
-    console.log(
-      `article.ArticleApproveds.length: ${article.ArticleApproveds.length}`
-    );
+    if (i === 0) {
+      console.log(
+        `--->  article.ArticleApproveds[0]: ${typeof article.ArticleApproveds[0]
+          .publicationDateForPdfReport} ${
+          article.ArticleApproveds[0].publicationDateForPdfReport
+        }`
+      );
+    }
     try {
       approvedArticlesObjArrayModified.push({
         refNumber: article.refNumber,
-        submitted: new Date().toISOString().slice(0, 10),
+        submitted: convertUtcDateObjToEasternDateObj(new Date()),
         headline: article.ArticleApproveds[0].headlineForPdfReport,
         publication: article.ArticleApproveds[0].publicationNameForPdfReport,
-        datePublished: article.ArticleApproveds[0].publicationDateForPdfReport,
+        datePublished: new Date(
+          article.ArticleApproveds[0].publicationDateForPdfReport
+        ),
         state,
         text: article.ArticleApproveds[0].textForPdfReport,
       });
