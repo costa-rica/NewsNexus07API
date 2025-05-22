@@ -18,12 +18,17 @@ const {
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
   createArticlesArrayWithSqlForSemanticKeywordsRating,
+  createNewsApiRequestsArray,
+  createArticlesApprovedArray,
 } = require("../modules/articles");
 const {
   convertUtcDateOrStringToEasternString,
   getMostRecentEasternFriday,
 } = require("../modules/common");
 const { DateTime } = require("luxon");
+const { createSpreadsheetFromArray } = require("../modules/excelExports");
+const path = require("path");
+const fs = require("fs");
 
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
@@ -792,5 +797,131 @@ router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch articles with ratings." });
   }
 });
+
+// 🔹 POST /articles/table-approved-by-request
+router.post(
+  "/table-approved-by-request",
+  authenticateToken,
+  async (req, res) => {
+    console.log("- POST /articles/table-approved-by-request");
+    let { dateRequestsLimit } = req.body;
+    if (!dateRequestsLimit) {
+      dateRequestsLimit = null;
+    }
+
+    try {
+      const requestsArray = await createNewsApiRequestsArray();
+      const { requestIdArray, manualFoundCount } =
+        await createArticlesApprovedArray(dateRequestsLimit);
+
+      // Count how many times each requestId appears in requestIdArray
+      const countMap = {};
+      for (const id of requestIdArray) {
+        countMap[id] = (countMap[id] || 0) + 1;
+      }
+
+      // Add countOfApprovedArticles to each request in the array
+      const requestsArrayWithCounts = requestsArray.map((request) => ({
+        ...request,
+        // date: request.createdAt,
+        countOfApprovedArticles: countMap[request.id] || 0,
+      }));
+
+      // Filter out requests with no approved articles
+      const filteredRequestsArray = requestsArrayWithCounts.filter(
+        (request) => {
+          // if (request.id === 6002) {
+          //   console.log(request);
+          // }
+          return request.countOfApprovedArticles > 0;
+        }
+      );
+      // console.log(
+      //   `---- filteredRequestsArray.length: ${filteredRequestsArray.length}`
+      // );
+
+      // Sort by count descending
+      const sortedRequestsArray = filteredRequestsArray.sort(
+        (a, b) => b.countOfApprovedArticles - a.countOfApprovedArticles
+      );
+
+      // console.log(
+      //   `---- sortedRequestsArray.length: ${sortedRequestsArray.length}`
+      // );
+      // console.log(sortedRequestsArray[0]);
+
+      const outputFilePath = path.join(
+        process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
+        `approved_by_request_${new Date().toISOString().split("T")[0]}.xlsx`
+      );
+      await createSpreadsheetFromArray(sortedRequestsArray, outputFilePath);
+      console.log(`✅ Excel file saved to: ${outputFilePath}`);
+
+      res.json({
+        requestsArrayCount: sortedRequestsArray.length,
+        requestIdArrayCount: requestIdArray.length,
+        manualFoundCount,
+        requestsArray: sortedRequestsArray,
+      });
+    } catch (error) {
+      console.error("❌ Error in /articles/table-approved-by-request:", error);
+      res.status(500).json({ error: "Failed to fetch request summary." });
+    }
+  }
+);
+
+// 🔹 GET /articles/download/table-approved-by-request - Download Report
+router.get(
+  "/download/table-approved-by-request",
+  authenticateToken,
+  async (req, res) => {
+    console.log(`- in GET /articles/download/table-approved-by-request`);
+
+    try {
+      const filename = `approved_by_request_${
+        new Date().toISOString().split("T")[0]
+      }.xlsx`;
+      const filePathAndName = path.join(
+        process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
+        filename
+      );
+
+      // Check if file exists
+      if (!fs.existsSync(filePathAndName)) {
+        return res
+          .status(404)
+          .json({ result: false, message: "File not found." });
+      } else {
+        console.log(`----> File exists: ${filePathAndName}`);
+      }
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+
+      // Let Express handle download
+      res.download(filePathAndName, filename, (err) => {
+        if (err) {
+          console.error("Download error:", err);
+          res
+            .status(500)
+            .json({ result: false, message: "File download failed." });
+        }
+      });
+    } catch (error) {
+      console.error("Error processing request:", error);
+      res.status(500).json({
+        result: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
+);
 
 module.exports = router;

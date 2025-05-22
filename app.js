@@ -22,7 +22,13 @@ var newsDataIoRouter = require("./routes/newsOrgs/newsDataIo");
 
 var app = express();
 const cors = require("cors");
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    credentials: true,
+    exposedHeaders: ["Content-Disposition"], // <-- this line is key
+  })
+);
 
 app.use(logger("dev"));
 app.use(express.json());

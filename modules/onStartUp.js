@@ -52,15 +52,20 @@ async function onStartUpCreateEnvUsers() {
 }
 
 function verifyCheckDirectoryExists() {
-  const responseDir = process.env.PATH_TO_API_RESPONSE_JSON_FILES;
-  if (!fs.existsSync(responseDir)) {
-    fs.mkdirSync(responseDir, { recursive: true });
-    console.log(`Created directory: ${responseDir}`);
-  }
-  const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-    console.log(`Created directory: ${reportsDir}`);
-  }
+  // add directory paths to check (and create if they don't exist)
+  const pathsToCheck = [
+    process.env.PATH_TO_API_RESPONSE_JSON_FILES,
+    process.env.PATH_PROJECT_RESOURCES_REPORTS,
+    process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
+    process.env.PATH_TO_AUTOMATION_EXCEL_FILES,
+  ];
+
+  pathsToCheck.forEach((dirPath) => {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+      console.log(`Created directory: ${dirPath}`);
+    }
+  });
 }
+
 module.exports = { onStartUpCreateEnvUsers, verifyCheckDirectoryExists };
