@@ -836,19 +836,11 @@ router.post(
           return request.countOfApprovedArticles > 0;
         }
       );
-      // console.log(
-      //   `---- filteredRequestsArray.length: ${filteredRequestsArray.length}`
-      // );
 
       // Sort by count descending
       const sortedRequestsArray = filteredRequestsArray.sort(
         (a, b) => b.countOfApprovedArticles - a.countOfApprovedArticles
       );
-
-      // console.log(
-      //   `---- sortedRequestsArray.length: ${sortedRequestsArray.length}`
-      // );
-      // console.log(sortedRequestsArray[0]);
 
       const outputFilePath = path.join(
         process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
@@ -858,9 +850,8 @@ router.post(
       console.log(`✅ Excel file saved to: ${outputFilePath}`);
 
       res.json({
-        requestsArrayCount: sortedRequestsArray.length,
-        requestIdArrayCount: requestIdArray.length,
-        manualFoundCount,
+        countOfApprovedArticles: requestIdArray.length + manualFoundCount,
+        countOfManuallyApprovedArticles: manualFoundCount,
         requestsArray: sortedRequestsArray,
       });
     } catch (error) {
