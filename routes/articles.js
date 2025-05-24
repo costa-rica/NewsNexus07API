@@ -33,6 +33,7 @@ const {
   sqlQueryArticles,
   sqlQueryArticlesSummaryStatistics,
   sqlQueryArticlesApproved,
+  sqlQueryArticlesWithRatings,
 } = require("../modules/queriesSql");
 
 // 🔹 POST /articles: filtered list of articles
@@ -45,35 +46,39 @@ router.post("/", authenticateToken, async (req, res) => {
     returnOnlyIsRelevant,
   } = req.body;
 
-  const { Op } = require("sequelize");
-
-  const whereClause = {};
-
-  // Apply publishedDate filter if provided
-  if (returnOnlyThisPublishedDateOrAfter) {
-    whereClause.publishedDate = {
-      [Op.gte]: new Date(returnOnlyThisPublishedDateOrAfter),
-    };
-  }
-
-  const articlesArray = await Article.findAll({
-    where: whereClause,
-    include: [
-      {
-        model: State,
-        through: { attributes: [] },
-      },
-      {
-        model: ArticleIsRelevant,
-      },
-      {
-        model: ArticleApproved,
-      },
-      {
-        model: NewsApiRequest,
-      },
-    ],
+  const articlesArray = await sqlQueryArticles({
+    publishedDate: returnOnlyThisPublishedDateOrAfter,
   });
+
+  // const { Op } = require("sequelize");
+
+  // const whereClause = {};
+
+  // // Apply publishedDate filter if provided
+  // if (returnOnlyThisPublishedDateOrAfter) {
+  //   whereClause.publishedDate = {
+  //     [Op.gte]: new Date(returnOnlyThisPublishedDateOrAfter),
+  //   };
+  // }
+
+  // const articlesArray = await Article.findAll({
+  //   where: whereClause,
+  //   include: [
+  //     {
+  //       model: State,
+  //       through: { attributes: [] },
+  //     },
+  //     {
+  //       model: ArticleIsRelevant,
+  //     },
+  //     {
+  //       model: ArticleApproved,
+  //     },
+  //     {
+  //       model: NewsApiRequest,
+  //     },
+  //   ],
+  // });
 
   console.log(
     "- articlesArray.length (before filtering):",
@@ -81,68 +86,107 @@ router.post("/", authenticateToken, async (req, res) => {
   );
 
   // Filter in JavaScript based on related tables
-  const articlesArrayFiltered = articlesArray.filter((article) => {
-    // Filter out not approved if requested
-    if (
-      returnOnlyIsNotApproved &&
-      article.ArticleApproveds &&
-      article.ArticleApproveds.length > 0
-    ) {
-      return false;
+  const articlesMap = new Map();
+
+  for (const row of articlesArray) {
+    if (!articlesMap.has(row.articleId)) {
+      articlesMap.set(row.articleId, {
+        id: row.articleId,
+        title: row.title,
+        description: row.description,
+        publishedDate: row.publishedDate,
+        url: row.url,
+        States: [],
+        ArticleIsRelevants: [],
+        ArticleApproveds: [],
+        NewsApiRequest: {
+          andString: row.andString,
+          orString: row.orString,
+          notString: row.notString,
+        },
+      });
     }
 
-    // Filter out not relevant if requested
-    if (
-      returnOnlyIsRelevant &&
-      article.ArticleIsRelevants &&
-      article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
-    ) {
-      return false;
+    const article = articlesMap.get(row.articleId);
+
+    if (row.stateId && !article.States.some((s) => s.id === row.stateId)) {
+      article.States.push({ id: row.stateId, name: row.stateName });
     }
 
-    return true;
-  });
+    if (row.isRelevant !== null) {
+      article.ArticleIsRelevants.push({ isRelevant: row.isRelevant });
+    }
 
-  console.log(
-    "- articlesArrayFiltered.length (after filtering):",
-    articlesArrayFiltered.length
-  );
+    if (row.approvedByUserId) {
+      article.ArticleApproveds.push({ userId: row.approvedByUserId });
+    }
+  }
 
-  const articlesArrayModified = articlesArrayFiltered.map((article) => {
-    const statesStringCommaSeparated = article.States.map(
-      (state) => state.name
-    ).join(", ");
-    const isRelevant =
-      !article.ArticleIsRelevants ||
-      article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
-    const isApproved =
-      article.ArticleApproveds &&
-      article.ArticleApproveds.some((entry) => entry.userId !== null);
+  const articlesArrayGrouped = Array.from(articlesMap.values());
+  // // ----- START OLD code
+  // const articlesArrayFiltered = articlesArray.filter((article) => {
+  //   // Filter out not approved if requested
+  //   if (
+  //     returnOnlyIsNotApproved &&
+  //     article.ArticleApproveds &&
+  //     article.ArticleApproveds.length > 0
+  //   ) {
+  //     return false;
+  //   }
 
-    let keyword = "";
-    if (article.NewsApiRequest?.andString)
-      keyword += `AND ${article.NewsApiRequest.andString}`;
-    if (article.NewsApiRequest?.orString)
-      keyword += ` OR ${article.NewsApiRequest.orString}`;
-    if (article.NewsApiRequest?.notString)
-      keyword += ` NOT ${article.NewsApiRequest.notString}`;
+  //   // Filter out not relevant if requested
+  //   if (
+  //     returnOnlyIsRelevant &&
+  //     article.ArticleIsRelevants &&
+  //     article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+  //   ) {
+  //     return false;
+  //   }
 
-    return {
-      // ...article.dataValues,
-      id: article.id,
-      title: article.title,
-      description: article.description,
-      publishedDate: article.publishedDate,
-      url: article.url,
-      statesStringCommaSeparated,
-      States: article.States,
-      isRelevant,
-      isApproved,
-      keyword,
-    };
-  });
+  //   return true;
+  // });
 
-  res.json({ articlesArray: articlesArrayModified });
+  // console.log(
+  //   "- articlesArrayFiltered.length (after filtering):",
+  //   articlesArrayFiltered.length
+  // );
+
+  // const articlesArrayModified = articlesArrayFiltered.map((article) => {
+  //   const statesStringCommaSeparated = article.States.map(
+  //     (state) => state.name
+  //   ).join(", ");
+  //   const isRelevant =
+  //     !article.ArticleIsRelevants ||
+  //     article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+  //   const isApproved =
+  //     article.ArticleApproveds &&
+  //     article.ArticleApproveds.some((entry) => entry.userId !== null);
+
+  //   let keyword = "";
+  //   if (article.NewsApiRequest?.andString)
+  //     keyword += `AND ${article.NewsApiRequest.andString}`;
+  //   if (article.NewsApiRequest?.orString)
+  //     keyword += ` OR ${article.NewsApiRequest.orString}`;
+  //   if (article.NewsApiRequest?.notString)
+  //     keyword += ` NOT ${article.NewsApiRequest.notString}`;
+
+  //   return {
+  //     // ...article.dataValues,
+  //     id: article.id,
+  //     title: article.title,
+  //     description: article.description,
+  //     publishedDate: article.publishedDate,
+  //     url: article.url,
+  //     statesStringCommaSeparated,
+  //     States: article.States,
+  //     isRelevant,
+  //     isApproved,
+  //     keyword,
+  //   };
+  // });
+  // // ----- END OLD code -----
+  // res.json({ articlesArray: articlesArrayModified });
+  res.json({ articlesArray: articlesArrayGrouped });
 });
 
 // 🔹 GET /articles/approved
@@ -568,7 +612,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     console.log(
       `checkpoint #1: ${((new Date() - startTime) / 1000).toFixed(2)}`
     );
-    const articlesArray = await sqlQueryArticles({
+    const articlesArray = await sqlQueryArticlesWithRatings({
       publishedDate: returnOnlyThisPublishedDateOrAfter,
       createdAt: returnOnlyThisCreatedAtDateOrAfter,
     });

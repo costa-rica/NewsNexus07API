@@ -1,6 +1,6 @@
 const { sequelize } = require("newsnexus07db");
 
-async function sqlQueryArticles({ publishedDate, createdAt }) {
+async function sqlQueryArticlesWithRatings({ publishedDate, createdAt }) {
   // ------ NOTE -----------------------------------
   // This funciton replaces:
   // const articlesArray = await Article.findAll({
@@ -237,9 +237,74 @@ async function sqlQueryRequestsFromApi({
   return results;
 }
 
+async function sqlQueryArticles({ publishedDate }) {
+  // ------ NOTE -----------------------------------
+  // const articlesArray = await Article.findAll({
+  //   where: whereClause,
+  //   include: [
+  //     {
+  //       model: State,
+  //       through: { attributes: [] },
+  //     },
+  //     {
+  //       model: ArticleIsRelevant,
+  //     },
+  //     {
+  //       model: ArticleApproved,
+  //     },
+  //     {
+  //       model: NewsApiRequest,
+  //     },
+  //   ],
+  // });
+  // -----------------------------------------
+  const replacements = {};
+  const whereClauses = [];
+
+  if (publishedDate) {
+    whereClauses.push(`a."publishedDate" >= :publishedDate`);
+    replacements.publishedDate = publishedDate;
+  }
+
+  const whereString =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const sql = `
+      SELECT
+        a.id AS "articleId",
+        a.title,
+        a.description,
+        a."publishedDate",
+        a.url,
+        s.id AS "stateId",
+        s.name AS "stateName",
+        ar."isRelevant",
+        aa."userId" AS "approvedByUserId",
+        nar."andString",
+        nar."orString",
+        nar."notString"
+      FROM "Articles" a
+      LEFT JOIN "ArticleStateContracts" asc ON a.id = asc."articleId"
+      LEFT JOIN "States" s ON asc."stateId" = s.id
+      LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
+      LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
+      LEFT JOIN "NewsApiRequests" nar ON nar.id = a."newsApiRequestId"
+      ${whereString}
+      ORDER BY a.id;
+    `;
+
+  const results = await sequelize.query(sql, {
+    replacements,
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  return results;
+}
+
 module.exports = {
   sqlQueryArticles,
   sqlQueryArticlesSummaryStatistics,
   sqlQueryArticlesApproved,
   sqlQueryRequestsFromApi,
+  sqlQueryArticlesWithRatings,
 };
