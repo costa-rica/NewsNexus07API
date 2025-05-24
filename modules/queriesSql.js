@@ -169,8 +169,77 @@ async function sqlQueryArticlesApproved() {
   return results;
 }
 
+async function sqlQueryRequestsFromApi({
+  dateLimitOnRequestMade,
+  includeIsFromAutomation,
+}) {
+  // ------ NOTE -----------------------------------
+  // const newsApiRequestsArray = await NewsApiRequest.findAll({
+  //   where: whereClause,
+  //   include: [
+  //     {
+  //       model: NewsArticleAggregatorSource,
+  //     },
+  //     {
+  //       model: NewsApiRequestWebsiteDomainContract,
+  //       include: [
+  //         {
+  //           model: WebsiteDomain,
+  //         },
+  //       ],
+  //     },
+  //   ],
+  // });
+  // -----------------------------------------
+  const replacements = {};
+  const whereClauses = [];
+
+  if (dateLimitOnRequestMade) {
+    whereClauses.push(`nar."createdAt" >= :dateLimitOnRequestMade`);
+    replacements.dateLimitOnRequestMade = dateLimitOnRequestMade;
+  }
+
+  if (includeIsFromAutomation !== true) {
+    whereClauses.push(`nar."isFromAutomation" = false`);
+  }
+
+  const whereString =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const sql = `
+    SELECT
+      nar.id AS "newsApiRequestId",
+      nar."createdAt",
+      nar."dateStartOfRequest",
+      nar."dateEndOfRequest",
+      nar."countOfArticlesReceivedFromRequest",
+      nar."countOfArticlesSavedToDbFromRequest",
+      nar.status,
+      nar."andString",
+      nar."orString",
+      nar."notString",
+      nas."nameOfOrg",
+      wd."name" AS "domainName",
+      ndc."includedOrExcludedFromRequest"
+    FROM "NewsApiRequests" nar
+    LEFT JOIN "NewsArticleAggregatorSources" nas ON nas.id = nar."newsArticleAggregatorSourceId"
+    LEFT JOIN "NewsApiRequestWebsiteDomainContracts" ndc ON ndc."newsApiRequestId" = nar.id
+    LEFT JOIN "WebsiteDomains" wd ON wd.id = ndc."websiteDomainId"
+    ${whereString}
+    ORDER BY nar."createdAt" DESC;
+  `;
+
+  const results = await sequelize.query(sql, {
+    replacements,
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  return results;
+}
+
 module.exports = {
   sqlQueryArticles,
   sqlQueryArticlesSummaryStatistics,
   sqlQueryArticlesApproved,
+  sqlQueryRequestsFromApi,
 };

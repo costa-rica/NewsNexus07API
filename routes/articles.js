@@ -367,10 +367,10 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
   //   ],
   // });
   const articlesArray = await sqlQueryArticlesSummaryStatistics();
-  console.log(
-    "-- [summary-statistics] articlesArray.length:",
-    articlesArray.length
-  );
+  // console.log(
+  //   "-- [summary-statistics] articlesArray.length:",
+  //   articlesArray.length
+  // );
 
   let articlesCount = 0;
   let articlesIsRelevantCount = 0;
@@ -382,7 +382,7 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     .toISODate(); // e.g. "2025-05-12"
   let addedYesterday = 0;
   let approvedThisWeek = 0;
-  console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
+  // console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
   const reportArray = await Report.findAll({});
   const lastReport = reportArray[reportArray.length - 1];
   const dayAfterSubmission = DateTime.fromJSDate(
