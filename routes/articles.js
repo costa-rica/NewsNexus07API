@@ -13,7 +13,7 @@ const {
   ArticleEntityWhoCategorizedArticleContract,
   ArtificialIntelligence,
   ArticleReviewed,
-  NewsArticleAggregatorSource,
+  Report,
 } = require("newsnexus07db");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
@@ -23,13 +23,16 @@ const {
 } = require("../modules/articles");
 const {
   convertUtcDateOrStringToEasternString,
-  getMostRecentEasternFriday,
+  // getMostRecentEasternFriday,
 } = require("../modules/common");
 const { DateTime } = require("luxon");
 const { createSpreadsheetFromArray } = require("../modules/excelExports");
 const path = require("path");
 const fs = require("fs");
-const { sqlQueryArticles } = require("../modules/queriesSql");
+const {
+  sqlQueryArticles,
+  sqlQueryArticlesSummaryStatistics,
+} = require("../modules/queriesSql");
 
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
@@ -295,20 +298,26 @@ router.post("/approve/:articleId", authenticateToken, async (req, res) => {
 
 // 🔹 GET /articles/summary-statistics
 router.get("/summary-statistics", authenticateToken, async (req, res) => {
-  const articlesArray = await Article.findAll({
-    include: [
-      {
-        model: State,
-        through: { attributes: [] }, // omit ArticleStateContract from result
-      },
-      {
-        model: ArticleIsRelevant,
-      },
-      {
-        model: ArticleApproved,
-      },
-    ],
-  });
+  // const articlesArray = await Article.findAll({
+  //   include: [
+  //     {
+  //       model: State,
+  //       through: { attributes: [] }, // omit ArticleStateContract from result
+  //     },
+  //     {
+  //       model: ArticleIsRelevant,
+  //     },
+  //     {
+  //       model: ArticleApproved,
+  //     },
+  //   ],
+  // });
+  const articlesArray = await sqlQueryArticlesSummaryStatistics();
+  console.log(
+    "-- [summary-statistics] articlesArray.length:",
+    articlesArray.length
+  );
+
   let articlesCount = 0;
   let articlesIsRelevantCount = 0;
   let articlesIsApprovedCount = 0;
@@ -318,19 +327,24 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     .minus({ days: 1 })
     .toISODate(); // e.g. "2025-05-12"
   let addedYesterday = 0;
-  const lastFridayEastern = getMostRecentEasternFriday();
   let approvedThisWeek = 0;
   console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
+  const reportArray = await Report.findAll({});
+  const lastReport = reportArray[reportArray.length - 1];
+  const dayAfterSubmission = DateTime.fromJSDate(
+    lastReport.dateSubmittedToClient,
+    { zone: "America/New_York" }
+  ).plus({ days: 1 });
 
   articlesArray.map((article) => {
     articlesCount++;
-    if (article.ArticleIsRelevants.isRelevant !== false) {
+    if (article.isRelevant !== false) {
       articlesIsRelevantCount++;
     }
-    if (article.ArticleApproveds.length > 0) {
+    if (article.approvalCreatedAt) {
       articlesIsApprovedCount++;
     }
-    if (article.States.length > 0) {
+    if (article.stateId) {
       hasStateAssigned++;
     }
     const articleDateStr = convertUtcDateOrStringToEasternString(
@@ -340,15 +354,10 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
       addedYesterday++;
     }
     if (
-      article.ArticleApproveds.some((entry) => {
-        const approvalDate = DateTime.fromJSDate(entry.createdAt, {
-          zone: "utc",
-        }).setZone("America/New_York");
-        return (
-          approvalDate >=
-          DateTime.fromJSDate(lastFridayEastern, { zone: "America/New_York" })
-        );
-      })
+      article.approvalCreatedAt &&
+      DateTime.fromJSDate(new Date(article.approvalCreatedAt), {
+        zone: "utc",
+      }).setZone("America/New_York") >= dayAfterSubmission
     ) {
       approvedThisWeek++;
     }
@@ -463,8 +472,8 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     returnOnlyThisCreatedAtDateOrAfter,
     semanticScorerEntityName,
     zeroShotScorerEntityName,
-    returnOnlyIsNotApproved,
-    returnOnlyIsRelevant,
+    // returnOnlyIsNotApproved,
+    // returnOnlyIsRelevant,
   } = req.body;
 
   let semanticScorerEntityId;
@@ -485,22 +494,22 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
   }
   try {
     // 🔹 Step 1: Get full list of articles as base array
-    const whereClause = {};
-    if (returnOnlyThisPublishedDateOrAfter) {
-      whereClause.publishedDate = {
-        [require("sequelize").Op.gte]: new Date(
-          returnOnlyThisPublishedDateOrAfter
-        ),
-      };
-    }
+    // const whereClause = {};
+    // if (returnOnlyThisPublishedDateOrAfter) {
+    //   whereClause.publishedDate = {
+    //     [require("sequelize").Op.gte]: new Date(
+    //       returnOnlyThisPublishedDateOrAfter
+    //     ),
+    //   };
+    // }
 
-    if (returnOnlyThisCreatedAtDateOrAfter) {
-      whereClause.createdAt = {
-        [require("sequelize").Op.gte]: new Date(
-          returnOnlyThisCreatedAtDateOrAfter
-        ),
-      };
-    }
+    // if (returnOnlyThisCreatedAtDateOrAfter) {
+    //   whereClause.createdAt = {
+    //     [require("sequelize").Op.gte]: new Date(
+    //       returnOnlyThisCreatedAtDateOrAfter
+    //     ),
+    //   };
+    // }
 
     console.log(
       `checkpoint #1: ${((new Date() - startTime) / 1000).toFixed(2)}`

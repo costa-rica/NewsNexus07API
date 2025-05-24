@@ -1,6 +1,28 @@
 const { sequelize } = require("newsnexus07db");
 
 async function sqlQueryArticles({ publishedDate, createdAt }) {
+  // ------ NOTE -----------------------------------
+  // This funciton replaces:
+  // const articlesArray = await Article.findAll({
+  //   where: whereClause,
+  //   include: [
+  //     { model: State, through: { attributes: [] } },
+  //     { model: ArticleIsRelevant },
+  //     { model: ArticleApproved },
+  //     {
+  //       model: NewsApiRequest,
+  //       include: [
+  //         {
+  //           model: NewsArticleAggregatorSource,
+  //         },
+  //       ],
+  //     },
+  //     { model: ArticleEntityWhoCategorizedArticleContract },
+  //     { model: ArticleReviewed },
+  //   ],
+  // });
+  // -----------------------------------------
+
   const replacements = {};
   const whereClauses = [];
 
@@ -59,6 +81,46 @@ async function sqlQueryArticles({ publishedDate, createdAt }) {
   return results;
 }
 
+async function sqlQueryArticlesSummaryStatistics() {
+  // ------ NOTE -----------------------------------
+  //  const articlesArray = await Article.findAll({
+  //   include: [
+  //     {
+  //       model: State,
+  //       through: { attributes: [] }, // omit ArticleStateContract from result
+  //     },
+  //     {
+  //       model: ArticleIsRelevant,
+  //     },
+  //     {
+  //       model: ArticleApproved,
+  //     },
+  //   ],
+  // });
+  // -----------------------------------------
+
+  const sql = `
+  SELECT
+    a.id AS "articleId",
+    a."createdAt",
+    ar."isRelevant",
+    aa."createdAt" AS "approvalCreatedAt",
+    s.id AS "stateId"
+  FROM "Articles" a
+  LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
+  LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
+  LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
+  LEFT JOIN "States" s ON s.id = asc."stateId";
+`;
+
+  const results = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  return results;
+}
+
 module.exports = {
   sqlQueryArticles,
+  sqlQueryArticlesSummaryStatistics,
 };
