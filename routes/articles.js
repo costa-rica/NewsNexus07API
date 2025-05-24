@@ -29,6 +29,7 @@ const { DateTime } = require("luxon");
 const { createSpreadsheetFromArray } = require("../modules/excelExports");
 const path = require("path");
 const fs = require("fs");
+const { sqlQueryArticles } = require("../modules/queriesSql");
 
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
@@ -504,59 +505,119 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     console.log(
       `checkpoint #1: ${((new Date() - startTime) / 1000).toFixed(2)}`
     );
-    const articlesArray = await Article.findAll({
-      where: whereClause,
-      include: [
-        { model: State, through: { attributes: [] } },
-        { model: ArticleIsRelevant },
-        { model: ArticleApproved },
-        {
-          model: NewsApiRequest,
-          include: [
-            {
-              model: NewsArticleAggregatorSource,
-            },
-          ],
-        },
-        { model: ArticleEntityWhoCategorizedArticleContract },
-        { model: ArticleReviewed },
-      ],
+    const articlesArray = await sqlQueryArticles({
+      publishedDate: returnOnlyThisPublishedDateOrAfter,
+      createdAt: returnOnlyThisCreatedAtDateOrAfter,
     });
+
+    console.log("typeof articlesArray:", typeof articlesArray);
+    console.log("isArray:", Array.isArray(articlesArray));
+    // console.log("first element:", articlesArray[0]);
+    // const articlesArray = await Article.findAll({
+    //   where: whereClause,
+    //   include: [
+    //     { model: State, through: { attributes: [] } },
+    //     { model: ArticleIsRelevant },
+    //     { model: ArticleApproved },
+    //     {
+    //       model: NewsApiRequest,
+    //       include: [
+    //         {
+    //           model: NewsArticleAggregatorSource,
+    //         },
+    //       ],
+    //     },
+    //     { model: ArticleEntityWhoCategorizedArticleContract },
+    //     { model: ArticleReviewed },
+    //   ],
+    // });
 
     console.log(
       `checkpoint #2: ${((new Date() - startTime) / 1000).toFixed(2)}`
     );
     // Step 2: Filter articles
-    // Filter in JavaScript based on related tables
-    const articlesArrayFiltered = articlesArray.filter((article) => {
-      // Filter out not approved if requested
-      if (
-        returnOnlyIsNotApproved &&
-        article.ArticleApproveds &&
-        article.ArticleApproveds.length > 0
-      ) {
-        return false;
+    // // Filter in JavaScript based on related tables
+    // const articlesArrayFiltered = articlesArray.filter((article) => {
+    //   // Filter out not approved if requested
+    //   if (
+    //     returnOnlyIsNotApproved &&
+    //     article.ArticleApproveds &&
+    //     article.ArticleApproveds.length > 0
+    //   ) {
+    //     return false;
+    //   }
+
+    //   // Filter out not relevant if requested
+    //   if (
+    //     returnOnlyIsRelevant &&
+    //     article.ArticleIsRelevants &&
+    //     article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+    //   ) {
+    //     return false;
+    //   }
+
+    //   return true;
+    // });
+
+    const articlesMap = new Map();
+
+    for (const row of articlesArray) {
+      if (!articlesMap.has(row.articleId)) {
+        articlesMap.set(row.articleId, {
+          id: row.articleId,
+          title: row.title,
+          description: row.description,
+          publishedDate: row.publishedDate,
+          publicationName: row.publicationName,
+          url: row.url,
+          States: [],
+          ArticleIsRelevants: [],
+          ArticleApproveds: [],
+          NewsApiRequest: {
+            andString: row.andString,
+            orString: row.orString,
+            notString: row.notString,
+            NewsArticleAggregatorSource: {
+              nameOfOrg: row.nameOfOrg,
+            },
+          },
+          ArticleEntityWhoCategorizedArticleContracts: [],
+          ArticleRevieweds: [],
+        });
       }
 
-      // Filter out not relevant if requested
-      if (
-        returnOnlyIsRelevant &&
-        article.ArticleIsRelevants &&
-        article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
-      ) {
-        return false;
+      const article = articlesMap.get(row.articleId);
+
+      if (row.stateId && !article.States.some((s) => s.id === row.stateId)) {
+        article.States.push({ id: row.stateId, name: row.stateName });
       }
 
-      return true;
-    });
+      if (row.isRelevant !== null) {
+        article.ArticleIsRelevants.push({ isRelevant: row.isRelevant });
+      }
+
+      if (row.approvedByUserId) {
+        article.ArticleApproveds.push({ userId: row.approvedByUserId });
+      }
+
+      if (row.entityWhoCategorizesId) {
+        article.ArticleEntityWhoCategorizedArticleContracts.push({
+          entityWhoCategorizesId: row.entityWhoCategorizesId,
+          keyword: row.keyword,
+          keywordRating: row.keywordRating,
+        });
+      }
+
+      if (row.reviewedByUserId) {
+        article.ArticleRevieweds.push({ userId: row.reviewedByUserId });
+      }
+    }
+
+    const articlesArrayFiltered = Array.from(articlesMap.values());
 
     console.log(
       `checkpoint #3: ${((new Date() - startTime) / 1000).toFixed(2)}`
     );
-
-    // console.log(
-    //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
-    // );
 
     // 🔹 Step 3: Build final article objects
     // const finalArticles = articlesArray.map((article) => {
@@ -630,6 +691,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         isBeingReviewed,
       };
     });
+
     console.log(
       `checkpoint #4: ${((new Date() - startTime) / 1000).toFixed(2)}`
     );
