@@ -32,6 +32,7 @@ const fs = require("fs");
 const {
   sqlQueryArticles,
   sqlQueryArticlesSummaryStatistics,
+  sqlQueryArticlesApproved,
 } = require("../modules/queriesSql");
 
 // 🔹 POST /articles: filtered list of articles
@@ -147,40 +148,59 @@ router.post("/", authenticateToken, async (req, res) => {
 // 🔹 GET /articles/approved
 router.get("/approved", authenticateToken, async (req, res) => {
   console.log("- GET /articles/approved");
+  const startTime = Date.now();
+  const articlesArray = await sqlQueryArticlesApproved();
+  // const articlesArray = await Article.findAll({
+  //   include: [
+  //     {
+  //       model: State,
+  //       through: { attributes: [] },
+  //     },
+  //     {
+  //       model: ArticleIsRelevant,
+  //     },
+  //     {
+  //       model: ArticleApproved,
+  //     },
+  //     {
+  //       model: NewsApiRequest,
+  //     },
+  //     { model: ArticleReportContract },
+  //   ],
+  // });
+  const articlesMap = new Map();
 
-  const articlesArray = await Article.findAll({
-    // where: whereClause,
-    include: [
-      {
-        model: State,
-        through: { attributes: [] },
-      },
-      {
-        model: ArticleIsRelevant,
-      },
-      {
-        model: ArticleApproved,
-      },
-      {
-        model: NewsApiRequest,
-      },
-      { model: ArticleReportContract },
-    ],
-  });
-
-  // Filter in JavaScript based on related tables
-  const articlesArrayFiltered = articlesArray.filter((article) => {
-    // Filter out not approved if requested
-    if (article.ArticleApproveds && article.ArticleApproveds.length > 0) {
-      return true;
+  for (const row of articlesArray) {
+    if (!articlesMap.has(row.articleId)) {
+      articlesMap.set(row.articleId, {
+        id: row.articleId,
+        title: row.title,
+        description: row.description,
+        publishedDate: row.publishedDate,
+        createdAt: row.createdAt,
+        url: row.url,
+        States: [],
+        ArticleReportContracts: [],
+      });
     }
-    return false;
-  });
 
-  const articlesArrayModified = articlesArrayFiltered.map((article) => {
-    // const states = article.States.map((state) => state.name).join(", ");
-    return {
-      ...article.dataValues,
+    const article = articlesMap.get(row.articleId);
+
+    if (row.stateId && !article.States.some((s) => s.id === row.stateId)) {
+      article.States.push({ id: row.stateId, name: row.stateName });
+    }
+
+    if (row.reportContractId) {
+      article.ArticleReportContracts.push({
+        id: row.reportContractId,
+        articleReferenceNumberInReport: row.articleReferenceNumberInReport,
+      });
+    }
+  }
+
+  const articlesArrayModified = Array.from(articlesMap.values()).map(
+    (article) => ({
+      ...article,
       isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
       articleReferenceNumberInReport:
         article.ArticleReportContracts.length > 0
@@ -188,15 +208,49 @@ router.get("/approved", authenticateToken, async (req, res) => {
               article.ArticleReportContracts.length - 1
             ].articleReferenceNumberInReport
           : "N/A",
-    };
-  });
+    })
+  );
+
+  // /// ---- Start  OLD Logic ------
+  // // Filter in JavaScript based on related tables
+  // const articlesArrayFiltered = articlesArray.filter((article) => {
+  //   // Filter out not approved if requested
+  //   if (article.ArticleApproveds && article.ArticleApproveds.length > 0) {
+  //     return true;
+  //   }
+  //   return false;
+  // });
+
+  // const articlesArrayModified = articlesArrayFiltered.map((article) => {
+  //   // const states = article.States.map((state) => state.name).join(", ");
+  //   return {
+  //     ...article.dataValues,
+  //     isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
+  //     articleReferenceNumberInReport:
+  //       article.ArticleReportContracts.length > 0
+  //         ? article.ArticleReportContracts[
+  //             article.ArticleReportContracts.length - 1
+  //           ].articleReferenceNumberInReport
+  //         : "N/A",
+  //   };
+  // });
+
+  // /// ---- End  OLD Logic ------
 
   console.log(
     "- articlesArrayFiltered.length (after filtering):",
     articlesArrayModified.length
   );
 
-  res.json({ articlesArray: articlesArrayModified });
+  const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
+  console.log(
+    `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
+  );
+
+  res.json({
+    articlesArray: articlesArrayModified,
+    timeToRenderResponseFromApiInSeconds,
+  });
 });
 
 // 🔹 POST /articles/user-toggle-is-not-relevant/:articleId

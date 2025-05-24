@@ -120,7 +120,57 @@ async function sqlQueryArticlesSummaryStatistics() {
   return results;
 }
 
+async function sqlQueryArticlesApproved() {
+  // ------ NOTE -----------------------------------
+  //  const articlesArray = await Article.findAll({
+  //   include: [
+  //     {
+  //       model: State,
+  //       through: { attributes: [] },
+  //     },
+  //     {
+  //       model: ArticleIsRelevant,
+  //     },
+  //     {
+  //       model: ArticleApproved,
+  //     },
+  //     {
+  //       model: NewsApiRequest,
+  //     },
+  //     { model: ArticleReportContract },
+  //   ],
+  // });
+  // -----------------------------------------
+  const sql = `
+    SELECT
+      a.id AS "articleId",
+      a.title,
+      a.description,
+      a."publishedDate",
+      a."createdAt",
+      a.url,
+      s.id AS "stateId",
+      s.name AS "stateName",
+      aa."userId" AS "approvedByUserId",
+      arc.id AS "reportContractId",
+      arc."articleReferenceNumberInReport"
+    FROM "Articles" a
+    LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
+    LEFT JOIN "States" s ON s.id = asc."stateId"
+    INNER JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
+    LEFT JOIN "ArticleReportContracts" arc ON arc."articleId" = a.id
+    ORDER BY a.id;
+  `;
+
+  const results = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  return results;
+}
+
 module.exports = {
   sqlQueryArticles,
   sqlQueryArticlesSummaryStatistics,
+  sqlQueryArticlesApproved,
 };
