@@ -501,6 +501,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       };
     }
 
+    console.log(
+      `checkpoint #1: ${((new Date() - startTime) / 1000).toFixed(2)}`
+    );
     const articlesArray = await Article.findAll({
       where: whereClause,
       include: [
@@ -520,6 +523,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       ],
     });
 
+    console.log(
+      `checkpoint #2: ${((new Date() - startTime) / 1000).toFixed(2)}`
+    );
     // Step 2: Filter articles
     // Filter in JavaScript based on related tables
     const articlesArrayFiltered = articlesArray.filter((article) => {
@@ -543,6 +549,10 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
 
       return true;
     });
+
+    console.log(
+      `checkpoint #3: ${((new Date() - startTime) / 1000).toFixed(2)}`
+    );
 
     // console.log(
     //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
@@ -620,7 +630,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         isBeingReviewed,
       };
     });
-
+    console.log(
+      `checkpoint #4: ${((new Date() - startTime) / 1000).toFixed(2)}`
+    );
     const timeToRenderResponseFromApiInSeconds =
       (Date.now() - startTime) / 1000;
     console.log(
