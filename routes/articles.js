@@ -456,7 +456,7 @@ router.delete("/:articleId", authenticateToken, async (req, res) => {
 // 🔹 POST /articles/with-ratings - Get articles with ratings
 router.post("/with-ratings", authenticateToken, async (req, res) => {
   console.log("- POST /articles/with-ratings");
-
+  const startTime = Date.now();
   const {
     returnOnlyThisPublishedDateOrAfter,
     returnOnlyThisCreatedAtDateOrAfter,
@@ -621,7 +621,15 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       };
     });
 
-    res.json({ articlesArray: finalArticles });
+    const timeToRenderResponseFromApiInSeconds =
+      (Date.now() - startTime) / 1000;
+    console.log(
+      `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
+    );
+    res.json({
+      articlesArray: finalArticles,
+      timeToRenderResponseFromApiInSeconds,
+    });
   } catch (error) {
     console.error("❌ Error in /articles/with-ratings:", error);
     res.status(500).json({ error: "Failed to fetch articles with ratings." });
