@@ -34,35 +34,92 @@ router.get(
 
       for (const approved of approvedArticlesArray) {
         const article = approved.Article;
+        let stateName = "Unassigned";
+
         if (article && article.States && article.States.length > 0) {
-          const firstState = article.States[0];
-          const stateName = firstState.name;
+          stateName = article.States[0].name;
+        }
 
-          // All-time count
-          stateCounts[stateName] = (stateCounts[stateName] || 0) + 1;
+        // All-time count
+        stateCounts[stateName] = (stateCounts[stateName] || 0) + 1;
 
-          // Since-last-report count
-          if (
-            lastReportDate &&
-            new Date(approved.createdAt) > new Date(lastReportDate)
-          ) {
-            stateCountsSinceLastReport[stateName] =
-              (stateCountsSinceLastReport[stateName] || 0) + 1;
-          }
+        // Since-last-report count
+        if (
+          lastReportDate &&
+          new Date(approved.createdAt) > new Date(lastReportDate)
+        ) {
+          stateCountsSinceLastReport[stateName] =
+            (stateCountsSinceLastReport[stateName] || 0) + 1;
+        }
 
-          // Current month count
-          const approvedDate = new Date(approved.createdAt);
-          const now = new Date();
-          const sameMonth =
-            approvedDate.getMonth() === now.getMonth() &&
-            approvedDate.getFullYear() === now.getFullYear();
+        // Current month count
+        const approvedDate = new Date(approved.createdAt);
+        const now = new Date();
+        const sameMonth =
+          approvedDate.getMonth() === now.getMonth() &&
+          approvedDate.getFullYear() === now.getFullYear();
 
-          if (sameMonth) {
-            stateCountsThisMonth[stateName] =
-              (stateCountsThisMonth[stateName] || 0) + 1;
-          }
+        if (sameMonth) {
+          stateCountsThisMonth[stateName] =
+            (stateCountsThisMonth[stateName] || 0) + 1;
         }
       }
+      // for (const approved of approvedArticlesArray) {
+      //   const article = approved.Article;
+      //   let stateName = "Unassigned";
+      //   if (article && article.States && article.States.length > 0) {
+      //     const firstState = article.States[0];
+      //     stateName = firstState.name;
+
+      //     // All-time count
+      //     stateCounts[stateName] = (stateCounts[stateName] || 0) + 1;
+
+      //     // Since-last-report count
+      //     if (
+      //       lastReportDate &&
+      //       new Date(approved.createdAt) > new Date(lastReportDate)
+      //     ) {
+      //       stateCountsSinceLastReport[stateName] =
+      //         (stateCountsSinceLastReport[stateName] || 0) + 1;
+      //     }
+
+      //     // Current month count
+      //     const approvedDate = new Date(approved.createdAt);
+      //     const now = new Date();
+      //     const sameMonth =
+      //       approvedDate.getMonth() === now.getMonth() &&
+      //       approvedDate.getFullYear() === now.getFullYear();
+
+      //     if (sameMonth) {
+      //       stateCountsThisMonth[stateName] =
+      //         (stateCountsThisMonth[stateName] || 0) + 1;
+      //     }
+      //   } else {
+      //     // All-time count
+      //     stateCounts[stateName] = (stateCounts[stateName] || 0) + 1;
+
+      //     // Since-last-report count
+      //     if (
+      //       lastReportDate &&
+      //       new Date(approved.createdAt) > new Date(lastReportDate)
+      //     ) {
+      //       stateCountsSinceLastReport[stateName] =
+      //         (stateCountsSinceLastReport[stateName] || 0) + 1;
+      //     }
+
+      //     // Current month count
+      //     const approvedDate = new Date(approved.createdAt);
+      //     const now = new Date();
+      //     const sameMonth =
+      //       approvedDate.getMonth() === now.getMonth() &&
+      //       approvedDate.getFullYear() === now.getFullYear();
+
+      //     if (sameMonth) {
+      //       stateCountsThisMonth[stateName] =
+      //         (stateCountsThisMonth[stateName] || 0) + 1;
+      //     }
+      //   }
+      // }
 
       const sumOfApproved = Object.values(stateCounts).reduce(
         (sum, val) => sum + val,
