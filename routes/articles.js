@@ -1031,12 +1031,12 @@ router.post(
         (a, b) => b.countOfApprovedArticles - a.countOfApprovedArticles
       );
 
-      const outputFilePath = path.join(
-        process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
-        `approved_by_request_${new Date().toISOString().split("T")[0]}.xlsx`
-      );
-      await createSpreadsheetFromArray(sortedRequestsArray, outputFilePath);
-      console.log(`✅ Excel file saved to: ${outputFilePath}`);
+      // const outputFilePath = path.join(
+      //   process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
+      //   `approved_by_request_${new Date().toISOString().split("T")[0]}.xlsx`
+      // );
+      // await createSpreadsheetFromArray(sortedRequestsArray, outputFilePath);
+      // console.log(`✅ Excel file saved to: ${outputFilePath}`);
 
       res.json({
         countOfApprovedArticles: requestIdArray.length + manualFoundCount,
@@ -1050,58 +1050,58 @@ router.post(
   }
 );
 
-// 🔹 GET /articles/download/table-approved-by-request - Download Report
-router.get(
-  "/download/table-approved-by-request",
-  authenticateToken,
-  async (req, res) => {
-    console.log(`- in GET /articles/download/table-approved-by-request`);
+// // 🔹 GET /articles/download/table-approved-by-request - Download Report
+// router.get(
+//   "/download/table-approved-by-request",
+//   authenticateToken,
+//   async (req, res) => {
+//     console.log(`- in GET /articles/download/table-approved-by-request`);
 
-    try {
-      const filename = `approved_by_request_${
-        new Date().toISOString().split("T")[0]
-      }.xlsx`;
-      const filePathAndName = path.join(
-        process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
-        filename
-      );
+//     try {
+//       const filename = `approved_by_request_${
+//         new Date().toISOString().split("T")[0]
+//       }.xlsx`;
+//       const filePathAndName = path.join(
+//         process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
+//         filename
+//       );
 
-      // Check if file exists
-      if (!fs.existsSync(filePathAndName)) {
-        return res
-          .status(404)
-          .json({ result: false, message: "File not found." });
-      } else {
-        console.log(`----> File exists: ${filePathAndName}`);
-      }
+//       // Check if file exists
+//       if (!fs.existsSync(filePathAndName)) {
+//         return res
+//           .status(404)
+//           .json({ result: false, message: "File not found." });
+//       } else {
+//         console.log(`----> File exists: ${filePathAndName}`);
+//       }
 
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${filename}"`
-      );
+//       res.setHeader(
+//         "Content-Type",
+//         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+//       );
+//       res.setHeader(
+//         "Content-Disposition",
+//         `attachment; filename="${filename}"`
+//       );
 
-      // Let Express handle download
-      res.download(filePathAndName, filename, (err) => {
-        if (err) {
-          console.error("Download error:", err);
-          res
-            .status(500)
-            .json({ result: false, message: "File download failed." });
-        }
-      });
-    } catch (error) {
-      console.error("Error processing request:", error);
-      res.status(500).json({
-        result: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  }
-);
+//       // Let Express handle download
+//       res.download(filePathAndName, filename, (err) => {
+//         if (err) {
+//           console.error("Download error:", err);
+//           res
+//             .status(500)
+//             .json({ result: false, message: "File download failed." });
+//         }
+//       });
+//     } catch (error) {
+//       console.error("Error processing request:", error);
+//       res.status(500).json({
+//         result: false,
+//         message: "Internal server error",
+//         error: error.message,
+//       });
+//     }
+//   }
+// );
 
 module.exports = router;
