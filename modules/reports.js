@@ -5,6 +5,8 @@ const PDFDocument = require("pdfkit");
 const archiver = require("archiver");
 const ExcelJS = require("exceljs");
 const { convertUtcDateObjToEasternDateObj } = require("./common");
+// const { Op } = require("sequelize");
+const { Report } = require("newsnexus07db");
 
 async function createXlsxForReport(dataArray) {
   console.log(` 🔹 createXlsxForReport`);
@@ -190,9 +192,41 @@ function createReportZipFile(csvFilename, zipFilename) {
   });
 }
 
+async function getDateOfLastSubmittedReport() {
+  try {
+    const latestReport = await Report.findOne({
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!latestReport) return null;
+
+    const createdAt = latestReport.createdAt;
+    const submitted = latestReport.dateSubmittedToClient;
+
+    if (!submitted) return createdAt;
+
+    const sameDate =
+      createdAt.toISOString().split("T")[0] ===
+      submitted.toISOString().split("T")[0];
+
+    if (sameDate) {
+      return submitted; // same day, keep submitted timestamp
+    } else {
+      // Return date with time set to 20:00:00
+      const adjusted = new Date(submitted);
+      adjusted.setHours(20, 0, 0, 0);
+      return adjusted;
+    }
+  } catch (error) {
+    console.error("Error in getDateOfLastSubmittedReport:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   createCsvForReport,
   createReportPdfFiles,
   createReportZipFile,
   createXlsxForReport,
+  getDateOfLastSubmittedReport,
 };
