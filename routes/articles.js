@@ -14,6 +14,7 @@ const {
   ArtificialIntelligence,
   ArticleReviewed,
   Report,
+  NewsArticleAggregatorSource,
 } = require("newsnexus07db");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
@@ -562,7 +563,7 @@ router.delete("/:articleId", authenticateToken, async (req, res) => {
 });
 
 // 🔹 POST /articles/with-ratings - Get articles with ratings
-router.post("/with-ratings", authenticateToken, async (req, res) => {
+router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
   console.log("- POST /articles/with-ratings");
   const startTime = Date.now();
   const {
@@ -570,8 +571,8 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     returnOnlyThisCreatedAtDateOrAfter,
     semanticScorerEntityName,
     zeroShotScorerEntityName,
-    // returnOnlyIsNotApproved,
-    // returnOnlyIsRelevant,
+    returnOnlyIsNotApproved,
+    returnOnlyIsRelevant,
   } = req.body;
 
   let semanticScorerEntityId;
@@ -617,8 +618,8 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       createdAt: returnOnlyThisCreatedAtDateOrAfter,
     });
 
-    console.log("typeof articlesArray:", typeof articlesArray);
-    console.log("isArray:", Array.isArray(articlesArray));
+    // console.log("typeof articlesArray:", typeof articlesArray);
+    // console.log("isArray:", Array.isArray(articlesArray));
     // console.log("first element:", articlesArray[0]);
     // const articlesArray = await Article.findAll({
     //   where: whereClause,
@@ -639,9 +640,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     //   ],
     // });
 
-    console.log(
-      `checkpoint #2: ${((new Date() - startTime) / 1000).toFixed(2)}`
-    );
+    // console.log(
+    //   `checkpoint #2: ${((new Date() - startTime) / 1000).toFixed(2)}`
+    // );
     // Step 2: Filter articles
     // // Filter in JavaScript based on related tables
     // const articlesArrayFiltered = articlesArray.filter((article) => {
@@ -668,7 +669,15 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
 
     const articlesMap = new Map();
 
+    console.log(articlesArray[0]);
+    console.log(" ----------- ");
+    console.log(" ----------- ");
+    console.log(" ----------- ");
+    console.log(" ----------- ");
     for (const row of articlesArray) {
+      if (row.articleId === 31) {
+        console.log(row);
+      }
       if (!articlesMap.has(row.articleId)) {
         articlesMap.set(row.articleId, {
           id: row.articleId,
@@ -725,6 +734,231 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     console.log(
       `checkpoint #3: ${((new Date() - startTime) / 1000).toFixed(2)}`
     );
+
+    // 🔹 Step 3: Build final article objects
+    // const finalArticles = articlesArray.map((article) => {
+    const finalArticles = articlesArrayFiltered.map((article) => {
+      const statesStringCommaSeparated = article.States.map(
+        (state) => state.name
+      ).join(", ");
+      const isRelevant =
+        !article.ArticleIsRelevants ||
+        article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+
+      const isApproved =
+        article.ArticleApproveds &&
+        article.ArticleApproveds.some((entry) => entry.userId !== null);
+
+      // let keyword = "";
+      let requestQueryString = "";
+      if (article.NewsApiRequest?.andString)
+        requestQueryString += `AND ${article.NewsApiRequest.andString}`;
+      if (article.NewsApiRequest?.orString)
+        requestQueryString += ` OR ${article.NewsApiRequest.orString}`;
+      if (article.NewsApiRequest?.notString)
+        requestQueryString += ` NOT ${article.NewsApiRequest.notString}`;
+
+      let nameOfOrg = "";
+      if (article.NewsApiRequest?.NewsArticleAggregatorSource?.nameOfOrg) {
+        nameOfOrg =
+          article.NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg;
+      }
+
+      let semanticRatingMaxLabel = "N/A";
+      let semanticRatingMax = "N/A";
+      let zeroShotRatingMaxLabel = "N/A";
+      let zeroShotRatingMax = "N/A";
+
+      if (article.ArticleEntityWhoCategorizedArticleContracts?.length > 0) {
+        article.ArticleEntityWhoCategorizedArticleContracts.forEach(
+          (contract) => {
+            if (contract.entityWhoCategorizesId === semanticScorerEntityId) {
+              semanticRatingMaxLabel = contract.keyword;
+              semanticRatingMax = contract.keywordRating;
+            }
+            if (zeroShotScorerEntityId) {
+              if (contract.entityWhoCategorizesId === zeroShotScorerEntityId) {
+                zeroShotRatingMaxLabel = contract.keyword;
+                zeroShotRatingMax = contract.keywordRating;
+              }
+            }
+          }
+        );
+      }
+
+      const isBeingReviewed = article.ArticleRevieweds?.length > 0;
+
+      return {
+        id: article.id,
+        title: article.title,
+        description: article.description,
+        publishedDate: article.publishedDate,
+        publicationName: article.publicationName,
+        url: article.url,
+        States: article.States,
+        statesStringCommaSeparated,
+        isRelevant,
+        isApproved,
+        requestQueryString,
+        nameOfOrg,
+        semanticRatingMaxLabel,
+        semanticRatingMax,
+        zeroShotRatingMaxLabel,
+        zeroShotRatingMax,
+        isBeingReviewed,
+      };
+    });
+
+    const filteredFinalArticles = returnOnlyIsRelevant
+      ? finalArticles.filter((article) => article.isRelevant === true)
+      : finalArticles;
+
+    console.log(
+      `checkpoint #4: ${((new Date() - startTime) / 1000).toFixed(2)}`
+    );
+    const timeToRenderResponseFromApiInSeconds =
+      (Date.now() - startTime) / 1000;
+    console.log(
+      `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
+    );
+    res.json({
+      // articlesArray: finalArticles,
+      articlesArray: filteredFinalArticles,
+      timeToRenderResponseFromApiInSeconds,
+    });
+  } catch (error) {
+    console.error("❌ Error in /articles/with-ratings:", error);
+    res.status(500).json({ error: "Failed to fetch articles with ratings." });
+  }
+});
+
+// 🔹 POST /articles/is-being-reviewed/:articleId
+router.post(
+  "/is-being-reviewed/:articleId",
+  authenticateToken,
+  async (req, res) => {
+    const { articleId } = req.params;
+    const { isBeingReviewed } = req.body;
+    const user = req.user;
+
+    console.log(`articleId ${articleId}: ${isBeingReviewed}`);
+
+    if (isBeingReviewed) {
+      // Create or update the record
+      await ArticleReviewed.upsert({
+        articleId: articleId,
+        userId: user.id,
+      });
+      return res.json({
+        result: true,
+        status: `articleId ${articleId} IS being reviewed`,
+      });
+    } else {
+      // Remove the record if it exists
+      await ArticleReviewed.destroy({
+        where: { articleId },
+      });
+      return res.json({
+        result: true,
+        status: `articleId ${articleId} IS NOT being reviewed`,
+      });
+    }
+  }
+);
+// 🔹 POST /articles/with-ratings - Get articles with ratings
+router.post("/with-ratings", authenticateToken, async (req, res) => {
+  console.log("- POST /articles/with-ratings");
+  const startTime = Date.now();
+  const {
+    returnOnlyThisPublishedDateOrAfter,
+    returnOnlyThisCreatedAtDateOrAfter,
+    semanticScorerEntityName,
+    zeroShotScorerEntityName,
+    returnOnlyIsNotApproved,
+    returnOnlyIsRelevant,
+  } = req.body;
+
+  let semanticScorerEntityId;
+  let zeroShotScorerEntityId;
+
+  if (semanticScorerEntityName) {
+    const semanticScorerEntityObj = await ArtificialIntelligence.findOne({
+      where: { name: semanticScorerEntityName },
+    });
+    semanticScorerEntityId = semanticScorerEntityObj.id;
+  }
+
+  if (zeroShotScorerEntityName) {
+    const zeroShotScorerEntityObj = await ArtificialIntelligence.findOne({
+      where: { name: zeroShotScorerEntityName },
+    });
+    zeroShotScorerEntityId = zeroShotScorerEntityObj.id;
+  }
+  try {
+    // 🔹 Step 1: Get full list of articles as base array
+    const whereClause = {};
+    if (returnOnlyThisPublishedDateOrAfter) {
+      whereClause.publishedDate = {
+        [require("sequelize").Op.gte]: new Date(
+          returnOnlyThisPublishedDateOrAfter
+        ),
+      };
+    }
+
+    if (returnOnlyThisCreatedAtDateOrAfter) {
+      whereClause.createdAt = {
+        [require("sequelize").Op.gte]: new Date(
+          returnOnlyThisCreatedAtDateOrAfter
+        ),
+      };
+    }
+
+    const articlesArray = await Article.findAll({
+      where: whereClause,
+      include: [
+        { model: State, through: { attributes: [] } },
+        { model: ArticleIsRelevant },
+        { model: ArticleApproved },
+        {
+          model: NewsApiRequest,
+          include: [
+            {
+              model: NewsArticleAggregatorSource,
+            },
+          ],
+        },
+        { model: ArticleEntityWhoCategorizedArticleContract },
+        { model: ArticleReviewed },
+      ],
+    });
+
+    // Step 2: Filter articles
+    // Filter in JavaScript based on related tables
+    const articlesArrayFiltered = articlesArray.filter((article) => {
+      // Filter out not approved if requested
+      if (
+        returnOnlyIsNotApproved &&
+        article.ArticleApproveds &&
+        article.ArticleApproveds.length > 0
+      ) {
+        return false;
+      }
+
+      // Filter out not relevant if requested
+      if (
+        returnOnlyIsRelevant &&
+        article.ArticleIsRelevants &&
+        article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // console.log(
+    //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
+    // );
 
     // 🔹 Step 3: Build final article objects
     // const finalArticles = articlesArray.map((article) => {
@@ -799,9 +1033,6 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       };
     });
 
-    console.log(
-      `checkpoint #4: ${((new Date() - startTime) / 1000).toFixed(2)}`
-    );
     const timeToRenderResponseFromApiInSeconds =
       (Date.now() - startTime) / 1000;
     console.log(
@@ -817,175 +1048,141 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
   }
 });
 
-// 🔹 POST /articles/is-being-reviewed/:articleId
-router.post(
-  "/is-being-reviewed/:articleId",
-  authenticateToken,
-  async (req, res) => {
-    const { articleId } = req.params;
-    const { isBeingReviewed } = req.body;
-    const user = req.user;
+// // 🔹 POST /articles/with-ratings-sql - Get articles with ratings (SQL version)
+// router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
+//   console.log("- POST /articles/with-ratings-sql");
 
-    console.log(`articleId ${articleId}: ${isBeingReviewed}`);
+//   const {
+//     returnOnlyThisPublishedDateOrAfter,
+//     entityWhoCategorizesIdSemantic,
+//     returnOnlyIsNotApproved,
+//     returnOnlyIsRelevant,
+//   } = req.body;
 
-    if (isBeingReviewed) {
-      // Create or update the record
-      await ArticleReviewed.upsert({
-        articleId: articleId,
-        userId: user.id,
-      });
-      return res.json({
-        result: true,
-        status: `articleId ${articleId} IS being reviewed`,
-      });
-    } else {
-      // Remove the record if it exists
-      await ArticleReviewed.destroy({
-        where: { articleId },
-      });
-      return res.json({
-        result: true,
-        status: `articleId ${articleId} IS NOT being reviewed`,
-      });
-    }
-  }
-);
+//   if (!entityWhoCategorizesIdSemantic) {
+//     return res
+//       .status(400)
+//       .json({ error: "Missing entityWhoCategorizesIdSemantic" });
+//   }
 
-// 🔹 POST /articles/with-ratings-sql - Get articles with ratings (SQL version)
-router.post("/with-ratings-sql", authenticateToken, async (req, res) => {
-  console.log("- POST /articles/with-ratings-sql");
+//   try {
+//     // 🔹 Step 1: Get full list of articles as base array
+//     const whereClause = {};
+//     if (returnOnlyThisPublishedDateOrAfter) {
+//       whereClause.publishedDate = {
+//         [require("sequelize").Op.gte]: new Date(
+//           returnOnlyThisPublishedDateOrAfter
+//         ),
+//       };
+//     }
 
-  const {
-    returnOnlyThisPublishedDateOrAfter,
-    entityWhoCategorizesIdSemantic,
-    returnOnlyIsNotApproved,
-    returnOnlyIsRelevant,
-  } = req.body;
+//     const articlesArray = await Article.findAll({
+//       where: whereClause,
+//       include: [
+//         { model: State, through: { attributes: [] } },
+//         { model: ArticleIsRelevant },
+//         { model: ArticleApproved },
+//         { model: NewsApiRequest },
+//       ],
+//     });
 
-  if (!entityWhoCategorizesIdSemantic) {
-    return res
-      .status(400)
-      .json({ error: "Missing entityWhoCategorizesIdSemantic" });
-  }
+//     // Filter in JavaScript based on related tables
+//     const articlesArrayFiltered = articlesArray.filter((article) => {
+//       // Filter out not approved if requested
+//       if (
+//         returnOnlyIsNotApproved &&
+//         article.ArticleApproveds &&
+//         article.ArticleApproveds.length > 0
+//       ) {
+//         return false;
+//       }
 
-  try {
-    // 🔹 Step 1: Get full list of articles as base array
-    const whereClause = {};
-    if (returnOnlyThisPublishedDateOrAfter) {
-      whereClause.publishedDate = {
-        [require("sequelize").Op.gte]: new Date(
-          returnOnlyThisPublishedDateOrAfter
-        ),
-      };
-    }
+//       // Filter out not relevant if requested
+//       if (
+//         returnOnlyIsRelevant &&
+//         article.ArticleIsRelevants &&
+//         article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
+//       ) {
+//         return false;
+//       }
 
-    const articlesArray = await Article.findAll({
-      where: whereClause,
-      include: [
-        { model: State, through: { attributes: [] } },
-        { model: ArticleIsRelevant },
-        { model: ArticleApproved },
-        { model: NewsApiRequest },
-      ],
-    });
+//       return true;
+//     });
 
-    // Filter in JavaScript based on related tables
-    const articlesArrayFiltered = articlesArray.filter((article) => {
-      // Filter out not approved if requested
-      if (
-        returnOnlyIsNotApproved &&
-        article.ArticleApproveds &&
-        article.ArticleApproveds.length > 0
-      ) {
-        return false;
-      }
+//     // 🔹 Step 3: Get keywordRating and keywordOfRating per article
+//     const ratedArticles =
+//       await createArticlesArrayWithSqlForSemanticKeywordsRating(
+//         entityWhoCategorizesIdSemantic,
+//         returnOnlyThisPublishedDateOrAfter
+//       );
 
-      // Filter out not relevant if requested
-      if (
-        returnOnlyIsRelevant &&
-        article.ArticleIsRelevants &&
-        article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
-      ) {
-        return false;
-      }
+//     const ratingMap = new Map();
+//     ratedArticles.forEach((item) => {
+//       ratingMap.set(item.id, {
+//         semanticRatingMaxLabel: item.keywordOfRating,
+//         semanticRatingMax: item.keywordRating,
+//       });
+//     });
 
-      return true;
-    });
+//     // 🔹 Step 3.1: Get zero-shot ratings
+//     const ratedArticles02 =
+//       await createArticlesArrayWithSqlForSemanticKeywordsRating(
+//         2,
+//         returnOnlyThisPublishedDateOrAfter
+//       );
+//     const ratingMap02 = new Map();
+//     ratedArticles02.forEach((item) => {
+//       ratingMap02.set(item.id, {
+//         zeroShotRatingMaxLabel: item.keywordOfRating,
+//         zeroShotRatingMax: item.keywordRating,
+//       });
+//     });
 
-    // 🔹 Step 3: Get keywordRating and keywordOfRating per article
-    const ratedArticles =
-      await createArticlesArrayWithSqlForSemanticKeywordsRating(
-        entityWhoCategorizesIdSemantic,
-        returnOnlyThisPublishedDateOrAfter
-      );
+//     // 🔹 Step 4: Build final article objects
+//     // const finalArticles = articlesArray.map((article) => {
+//     const finalArticles = articlesArrayFiltered.map((article) => {
+//       const states = article.States.map((state) => state.name).join(", ");
+//       const isRelevant =
+//         !article.ArticleIsRelevants ||
+//         article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
+//       const isApproved =
+//         article.ArticleApproveds &&
+//         article.ArticleApproveds.some((entry) => entry.userId !== null);
 
-    const ratingMap = new Map();
-    ratedArticles.forEach((item) => {
-      ratingMap.set(item.id, {
-        semanticRatingMaxLabel: item.keywordOfRating,
-        semanticRatingMax: item.keywordRating,
-      });
-    });
+//       let keyword = "";
+//       if (article.NewsApiRequest?.andString)
+//         keyword += `AND ${article.NewsApiRequest.andString}`;
+//       if (article.NewsApiRequest?.orString)
+//         keyword += ` OR ${article.NewsApiRequest.orString}`;
+//       if (article.NewsApiRequest?.notString)
+//         keyword += ` NOT ${article.NewsApiRequest.notString}`;
 
-    // 🔹 Step 3.1: Get zero-shot ratings
-    const ratedArticles02 =
-      await createArticlesArrayWithSqlForSemanticKeywordsRating(
-        2,
-        returnOnlyThisPublishedDateOrAfter
-      );
-    const ratingMap02 = new Map();
-    ratedArticles02.forEach((item) => {
-      ratingMap02.set(item.id, {
-        zeroShotRatingMaxLabel: item.keywordOfRating,
-        zeroShotRatingMax: item.keywordRating,
-      });
-    });
+//       const rating = ratingMap.get(article.id) || {};
+//       const rating02 = ratingMap02.get(article.id) || {};
 
-    // 🔹 Step 4: Build final article objects
-    // const finalArticles = articlesArray.map((article) => {
-    const finalArticles = articlesArrayFiltered.map((article) => {
-      const states = article.States.map((state) => state.name).join(", ");
-      const isRelevant =
-        !article.ArticleIsRelevants ||
-        article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
-      const isApproved =
-        article.ArticleApproveds &&
-        article.ArticleApproveds.some((entry) => entry.userId !== null);
+//       return {
+//         id: article.id,
+//         title: article.title,
+//         description: article.description,
+//         publishedDate: article.publishedDate,
+//         url: article.url,
+//         states,
+//         isRelevant,
+//         isApproved,
+//         keyword,
+//         semanticRatingMaxLabel: rating.semanticRatingMaxLabel || null,
+//         semanticRatingMax: rating.semanticRatingMax || null,
+//         zeroShotRatingMaxLabel: rating02.zeroShotRatingMaxLabel || null,
+//         zeroShotRatingMax: rating02.zeroShotRatingMax || null,
+//       };
+//     });
 
-      let keyword = "";
-      if (article.NewsApiRequest?.andString)
-        keyword += `AND ${article.NewsApiRequest.andString}`;
-      if (article.NewsApiRequest?.orString)
-        keyword += ` OR ${article.NewsApiRequest.orString}`;
-      if (article.NewsApiRequest?.notString)
-        keyword += ` NOT ${article.NewsApiRequest.notString}`;
-
-      const rating = ratingMap.get(article.id) || {};
-      const rating02 = ratingMap02.get(article.id) || {};
-
-      return {
-        id: article.id,
-        title: article.title,
-        description: article.description,
-        publishedDate: article.publishedDate,
-        url: article.url,
-        states,
-        isRelevant,
-        isApproved,
-        keyword,
-        semanticRatingMaxLabel: rating.semanticRatingMaxLabel || null,
-        semanticRatingMax: rating.semanticRatingMax || null,
-        zeroShotRatingMaxLabel: rating02.zeroShotRatingMaxLabel || null,
-        zeroShotRatingMax: rating02.zeroShotRatingMax || null,
-      };
-    });
-
-    res.json({ articlesArray: finalArticles });
-  } catch (error) {
-    console.error("❌ Error in /articles/with-ratings:", error);
-    res.status(500).json({ error: "Failed to fetch articles with ratings." });
-  }
-});
+//     res.json({ articlesArray: finalArticles });
+//   } catch (error) {
+//     console.error("❌ Error in /articles/with-ratings:", error);
+//     res.status(500).json({ error: "Failed to fetch articles with ratings." });
+//   }
+// });
 
 // 🔹 POST /articles/table-approved-by-request
 router.post(

@@ -77,7 +77,6 @@ async function sqlQueryArticlesWithRatings({ publishedDate, createdAt }) {
     type: sequelize.QueryTypes.SELECT,
   });
 
-  // console.log("results:", results);
   return results;
 }
 
