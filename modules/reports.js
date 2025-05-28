@@ -122,10 +122,11 @@ function createReportPdfFiles(dataArray) {
 
     const fields = [
       { label: "Ref #", value: article.refNumber },
-      { label: "Submitted", value: article.submitted },
+      // format date to MM/DD/YYYY
+      { label: "Submitted", value: article.submitted.toLocaleDateString() },
       { label: "Headline", value: article.headline },
       { label: "Publication", value: article.publication },
-      { label: "Date", value: article.datePublished },
+      { label: "Date", value: article.datePublished.toLocaleDateString() },
       { label: "State", value: article.state },
       { label: "Text", value: article.text },
     ];
