@@ -7,7 +7,10 @@ const {
   State,
   ArticleReportContract,
 } = require("newsnexus07db");
-const { convertUtcDateObjToEasternDateObj } = require("../modules/common");
+const {
+  convertJavaScriptDateToTimezoneString,
+  createJavaScriptExcelDateObjectEastCoasUs,
+} = require("../modules/common");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
   createCsvForReport,
@@ -18,6 +21,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 const { Op } = require("sequelize");
+const { DateTime } = require("luxon");
 
 // 🔹 GET /reports: Get all the saved reports
 router.get("/", authenticateToken, async (req, res) => {
@@ -79,19 +83,13 @@ router.post("/create", authenticateToken, async (req, res) => {
 
   const zipFilename = `report_bundle_${report.id}.zip`;
 
-  // // NOTE:  if not includeAllArticles -- > take out all articles already in a report
-  // if (!includeAllArticles) {
-  //   const articlesInReport = await ArticleReportContract.findAll();
-  //   approvedArticlesObjArray = approvedArticlesObjArray.filter(
-  //     (article) => !articlesInReport.some((a) => a.articleId === article.id)
-  //   );
-  // }
+  const nowET = convertJavaScriptDateToTimezoneString(
+    new Date(),
+    "America/New_York"
+  ).dateString; // YYYY-MM-DD
+  const datePrefixET = nowET.replace(/[-:]/g, "").slice(2, 8);
+  console.log(`datePrefixET: ${datePrefixET}`);
 
-  const datePrefixET = convertUtcDateObjToEasternDateObj(new Date())
-    .toISOString()
-    .slice(2, 10)
-    .replace(/-/g, ""); // YYMMDD
-  // let approvedArticlesObjArrayModified = approvedArticlesObjArray.map(
   let approvedArticlesObjArrayModified = [];
 
   for (let i = 0; i < approvedArticlesObjArray.length; i++) {
@@ -121,7 +119,7 @@ router.post("/create", authenticateToken, async (req, res) => {
     try {
       approvedArticlesObjArrayModified.push({
         refNumber: article.refNumber,
-        submitted: convertUtcDateObjToEasternDateObj(new Date()),
+        submitted: createJavaScriptExcelDateObjectEastCoasUs(),
         headline: article.ArticleApproveds[0].headlineForPdfReport,
         publication: article.ArticleApproveds[0].publicationNameForPdfReport,
         datePublished: new Date(
@@ -137,24 +135,14 @@ router.post("/create", authenticateToken, async (req, res) => {
         .json({ error: `Error processing article id ${article.id}: ${error}` });
     }
   }
-  console.log(`finished loops`);
 
   // step 2: create a csv file and save to PATH_PROJECT_RESOURCES_REPORTS
   try {
     const filteredArticles = approvedArticlesObjArrayModified.filter(Boolean); // remove nulls
-    // const csvFilename = createCsvForReport(filteredArticles);
     const xlsxFilename = await createXlsxForReport(filteredArticles);
     createReportPdfFiles(filteredArticles); // Generate PDFs for each article
-    // const zipFilename = await createReportZipFile(xlsxFilename);
     await createReportZipFile(xlsxFilename, zipFilename);
-    // report.reportName = zipFilename;
     report.reportName = zipFilename;
-    // report.pathToReport = path.join(
-    //   process.env.PATH_PROJECT_RESOURCES_REPORTS,
-    //   zipFilename
-    // );
-    // report.hasPdf = true;
-    // report.hasCsv = true;
     await report.save();
 
     res.json({ message: "CSV created", zipFilename });

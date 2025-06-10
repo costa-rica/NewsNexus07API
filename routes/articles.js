@@ -23,7 +23,7 @@ const {
   createArticlesApprovedArray,
 } = require("../modules/articles");
 const {
-  convertUtcDateOrStringToEasternString,
+  convertDbUtcDateOrStringToEasternString,
   // getMostRecentEasternFriday,
 } = require("../modules/common");
 const { DateTime } = require("luxon");
@@ -446,7 +446,7 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.stateId) {
       hasStateAssigned++;
     }
-    const articleDateStr = convertUtcDateOrStringToEasternString(
+    const articleDateStr = convertDbUtcDateOrStringToEasternString(
       article.createdAt
     ).split(" ")[0];
     if (articleDateStr === yesterdayEastCoastDateStr) {

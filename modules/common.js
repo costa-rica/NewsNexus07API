@@ -100,7 +100,8 @@ function writeResponseDataFromNewsAggregator(
 }
 
 // Returns string formatted in Eastern Time
-function convertUtcDateOrStringToEasternString(input) {
+function convertDbUtcDateOrStringToEasternString(input) {
+  // NOTE: this is useful for converting article.createdAt dates - if not for database seriously ask why am I using it and not createJavaScriptExcelDateObjectEastCoasUs
   let dt;
   if (typeof input === "string") {
     dt = DateTime.fromISO(input, { zone: "utc" });
@@ -112,23 +113,69 @@ function convertUtcDateOrStringToEasternString(input) {
 
   return dt.setZone("America/New_York").toFormat("yyyy-MM-dd HH:mm");
 }
-function convertUtcDateObjToEasternDateObj(utcDateObj) {
-  return DateTime.fromJSDate(utcDateObj, { zone: "utc" }) // Start from UTC
-    .setZone("America/New_York") // Convert to ET
-    .toJSDate(); // Return a regular Date object (in ET)
-}
 
 function getMostRecentEasternFriday() {
   const now = DateTime.now().setZone("America/New_York");
   const daysSinceFriday = (now.weekday + 1) % 7; // Luxon weekday: Mon=1...Sun=7
   return now.minus({ days: daysSinceFriday }).startOf("day").toJSDate();
 }
+
+function convertJavaScriptDateToTimezoneString(javascriptDate, tzString) {
+  // NOTE: this returns an object (in tzString) with the following properties:
+  // dateParts {
+  //   month: '06',
+  //   literal: ' ',
+  //   day: '10',
+  //   year: '2025',
+  //   hour: '08',
+  //   minute: '03',
+  //   dayPeriod: 'AM'
+  //   dateString: '2025-06-10'
+  // }
+  const options = {
+    timeZone: tzString,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  const parts = new Intl.DateTimeFormat("en-US", options).formatToParts(
+    javascriptDate
+  );
+  const dateParts = Object.fromEntries(
+    parts.map(({ type, value }) => [type, value])
+  );
+  dateParts.dateString = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+
+  return dateParts;
+}
+
+function createJavaScriptExcelDateObjectEastCoasUs(now = new Date()) {
+  // NOTE: only use this for Excel otherwise the date is a bit convoluted
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "short",
+  });
+  const parts = formatter.formatToParts(now);
+  const tzName = parts.find((part) => part.type === "timeZoneName")?.value;
+  // NOTE: returns EDT (4 hours back) or EST (3 hours back)
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+  if (tzName === "EDT") {
+    return fourHoursAgo;
+  } else {
+    return threeHoursAgo;
+  }
+}
+
 module.exports = {
   checkBody,
   checkBodyReturnMissing,
   writeRequestArgs,
   writeResponseDataFromNewsAggregator,
-  convertUtcDateOrStringToEasternString,
-  convertUtcDateObjToEasternDateObj,
+  convertDbUtcDateOrStringToEasternString,
   getMostRecentEasternFriday,
+  convertJavaScriptDateToTimezoneString,
+  createJavaScriptExcelDateObjectEastCoasUs,
 };

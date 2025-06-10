@@ -4,9 +4,10 @@ const { Parser } = require("json2csv");
 const PDFDocument = require("pdfkit");
 const archiver = require("archiver");
 const ExcelJS = require("exceljs");
-const { convertUtcDateObjToEasternDateObj } = require("./common");
+const { convertJavaScriptDateToTimezoneString } = require("./common");
 // const { Op } = require("sequelize");
 const { Report } = require("newsnexus07db");
+// const { DateTime } = require("luxon");
 
 async function createXlsxForReport(dataArray) {
   console.log(` 🔹 createXlsxForReport`);
@@ -17,15 +18,15 @@ async function createXlsxForReport(dataArray) {
     );
   }
   try {
-    const nowET = convertUtcDateObjToEasternDateObj(new Date());
-    const timestamp = nowET
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace("T", "-")
-      .slice(2, 8);
-    const fileName = `cr${timestamp}.xlsx`;
+    const javascriptDate = new Date();
+    const dateParts = convertJavaScriptDateToTimezoneString(
+      javascriptDate,
+      "America/New_York"
+    );
+    const fileName = `cr${dateParts.year.slice(2, 4)}${dateParts.month}${
+      dateParts.day
+    }.xlsx`;
     const filePath = path.join(outputDir, fileName);
-
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report");
     console.log(`filename: ${fileName}`);
@@ -48,11 +49,34 @@ async function createXlsxForReport(dataArray) {
     ];
 
     worksheet.columns = columns;
-
     dataArray.forEach((row) => {
       worksheet.addRow(row);
     });
+    // dataArray.forEach((row) => {
+    //   const dateParts = convertJavaScriptDateToTimezoneString(
+    //     row.submitted,
+    //     "America/New_York"
+    //   );
 
+    //   // Join into ISO string format
+    //   // const isoString = `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:00`;
+    //   const dateString = `${dateParts.month}/${dateParts.day}/${dateParts.year}`;
+
+    //   // // Let Luxon parse it in ET
+    //   // const dt = DateTime.fromISO(isoString, { zone: "America/New_York" });
+
+    //   // // Convert to JS Date
+    //   // const jsDate = dt.toJSDate(); // This keeps the correct ET time
+
+    //   // Insert into Excel
+    //   const rowCopy = { ...row, submitted: dateString };
+    //   const addedRow = worksheet.addRow(rowCopy);
+
+    //   // Apply Excel date formatting
+    //   const submittedCell = addedRow.getCell("submitted");
+    //   // submittedCell.numFmt = "mm/dd/yyyy hh:mm";
+    //   submittedCell.numFmt = "mm/dd/yyyy";
+    // });
     worksheet.eachRow((row) => {
       row.eachCell((cell) => {
         cell.alignment = { wrapText: false, vertical: "top" };
@@ -89,12 +113,17 @@ function createCsvForReport(dataArray) {
     );
   }
 
-  const nowET = convertUtcDateObjToEasternDateObj(new Date());
-  const timestamp = nowET
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace("T", "-")
-    .slice(2, 8);
+  const nowET = convertJavaScriptDateToTimezoneString(
+    new Date(),
+    "America/New_York"
+  ).dateString;
+  // const timestamp = nowET.replace(/[-:]/g, "").replace("T", "-").slice(2, 8);
+  const timestamp = nowET.replace(/[-:]/g, "").slice(2, 8);
+
+  console.log("-------- check timestamp --------");
+  console.log(`timestamp: ${timestamp}`);
+  console.log("---------------------------------");
+
   const fileName = `cr${timestamp}.csv`;
   const filePath = path.join(outputDir, fileName);
   // fs.writeFileSync(filePath, csv);
@@ -125,7 +154,8 @@ function createReportPdfFiles(dataArray) {
     const fields = [
       { label: "Ref #", value: article.refNumber },
       // format date to MM/DD/YYYY
-      { label: "Submitted", value: article.submitted.toLocaleDateString() },
+      // { label: "Submitted", value: article.submitted.toLocaleDateString() },
+      { label: "Submitted", value: article.submitted },
       { label: "Headline", value: article.headline },
       { label: "Publication", value: article.publication },
       { label: "Date", value: article.datePublished.toLocaleDateString() },
@@ -144,6 +174,7 @@ function createReportPdfFiles(dataArray) {
     doc.end();
   });
 
+  console.log(`---> finished pdf creation`);
   return pdfOutputDir;
 }
 
