@@ -31,10 +31,14 @@ const { createSpreadsheetFromArray } = require("../modules/excelExports");
 const path = require("path");
 const fs = require("fs");
 const {
-  sqlQueryArticles,
+  sqlQueryArticlesOld,
   sqlQueryArticlesSummaryStatistics,
   sqlQueryArticlesApproved,
   sqlQueryArticlesWithRatings,
+  sqlQueryArticlesWithStates,
+  sqlQueryArticles,
+  sqlQueryArticlesWithStatesApproved,
+  sqlQueryArticlesWithStatesApprovedReportContract,
 } = require("../modules/queriesSql");
 
 // 🔹 POST /articles: filtered list of articles
@@ -47,7 +51,7 @@ router.post("/", authenticateToken, async (req, res) => {
     returnOnlyIsRelevant,
   } = req.body;
 
-  const articlesArray = await sqlQueryArticles({
+  const articlesArray = await sqlQueryArticlesOld({
     publishedDate: returnOnlyThisPublishedDateOrAfter,
   });
 
@@ -195,24 +199,58 @@ router.get("/approved", authenticateToken, async (req, res) => {
   console.log("- GET /articles/approved");
   const startTime = Date.now();
   const articlesArray = await sqlQueryArticlesApproved();
-  // const articlesArray = await Article.findAll({
-  //   include: [
-  //     {
-  //       model: State,
-  //       through: { attributes: [] },
-  //     },
-  //     {
-  //       model: ArticleIsRelevant,
-  //     },
-  //     {
-  //       model: ArticleApproved,
-  //     },
-  //     {
-  //       model: NewsApiRequest,
-  //     },
-  //     { model: ArticleReportContract },
-  //   ],
+
+  console.log(
+    `- articlesArray.length (before filtering): ${articlesArray.length}`
+  );
+  const approvedArticlesArray = articlesArray.filter(
+    (article) => article.ArticleApproveds.length > 0
+  );
+
+  const approvedArticlesArrayModified = approvedArticlesArray.map((article) => {
+    if (article.ArticleReportContracts.length > 0) {
+      return {
+        ...article,
+        isSubmitted: "Yes",
+        // articleReferenceNumberInReport:
+        //   article.ArticleReportContracts[
+        //     article.ArticleReportContracts.length - 1
+        //   ].articleReferenceNumberInReport,
+      };
+    }
+    return {
+      ...article,
+      isSubmitted: "No",
+    };
+  });
+
+  console.log(
+    `- approvedArticlesArrayModified.length (after filtering): ${approvedArticlesArrayModified.length}`
+  );
+
+  const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
+  // res.json({ articlesArray4: approvedArticlesArray });
+  res.json({
+    articlesArray: approvedArticlesArrayModified,
+    timeToRenderResponseFromApiInSeconds,
+  });
+  // const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
+  // console.log(
+  //   `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
+  // );
+
+  // res.json({
+  //   articlesArray: articlesArrayModified,
+  //   timeToRenderResponseFromApiInSeconds,
   // });
+});
+
+// 🔹 GET /articles/approved-old
+router.get("/approved-old", authenticateToken, async (req, res) => {
+  console.log("- GET /articles/approved-old");
+  const startTime = Date.now();
+  const articlesArray = await sqlQueryArticlesApproved();
+
   const articlesMap = new Map();
 
   for (const row of articlesArray) {
@@ -295,6 +333,19 @@ router.get("/approved", authenticateToken, async (req, res) => {
   res.json({
     articlesArray: articlesArrayModified,
     timeToRenderResponseFromApiInSeconds,
+  });
+});
+
+router.get("/approved-test", async (req, res) => {
+  const articlesArray =
+    await sqlQueryArticlesWithStatesApprovedReportContract();
+  // console.log(articlesArray);
+  // const articlesArray = await sqlQueryArticles();
+  let article45 = articlesArray.find((article) => article.id === 45);
+  console.log("article45: ", article45);
+  res.json({
+    articlesArray: article45,
+    articlesArrayLength: articlesArray.length,
   });
 });
 
