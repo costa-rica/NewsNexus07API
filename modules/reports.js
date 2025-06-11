@@ -155,7 +155,17 @@ function createReportPdfFiles(dataArray) {
       { label: "Ref #", value: article.refNumber },
       // format date to MM/DD/YYYY
       // { label: "Submitted", value: article.submitted.toLocaleDateString() },
-      { label: "Submitted", value: article.submitted },
+      {
+        label: "Submitted",
+        value: new Date(article.submitted).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "numeric", // no leading zero
+          day: "numeric", // no leading zero
+          // hour: "2-digit",
+          // minute: "2-digit",
+          // hour12: false, // Use 24-hour format; change to true for AM/PM
+        }),
+      },
       { label: "Headline", value: article.headline },
       { label: "Publication", value: article.publication },
       { label: "Date", value: article.datePublished.toLocaleDateString() },
