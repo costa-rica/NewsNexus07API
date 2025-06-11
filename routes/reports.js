@@ -94,28 +94,27 @@ router.post("/create", authenticateToken, async (req, res) => {
 
   for (let i = 0; i < approvedArticlesObjArray.length; i++) {
     const article = approvedArticlesObjArray[i];
-
+    const counter = String(i + 1).padStart(3, "0"); // 001, 002, ...
+    article.refNumber = `${datePrefixET}${counter}`; // e.g., 250418001
     // create ArticleReportContract
     await ArticleReportContract.create({
       reportId: report.id,
       articleId: article.id,
+      articleReferenceNumberInReport: article.refNumber,
     });
-
-    const counter = String(i + 1).padStart(3, "0"); // 001, 002, ...
-    article.refNumber = `${datePrefixET}${counter}`; // e.g., 250418001
     let state;
     if (article.States?.length > 0) {
       state = article.States[0].abbreviation;
     }
 
-    if (i === 0) {
-      console.log(
-        `--->  article.ArticleApproveds[0]: ${typeof article.ArticleApproveds[0]
-          .publicationDateForPdfReport} ${
-          article.ArticleApproveds[0].publicationDateForPdfReport
-        }`
-      );
-    }
+    // if (i === 0) {
+    //   console.log(
+    //     `--->  article.ArticleApproveds[0]: ${typeof article.ArticleApproveds[0]
+    //       .publicationDateForPdfReport} ${
+    //       article.ArticleApproveds[0].publicationDateForPdfReport
+    //     }`
+    //   );
+    // }
     try {
       approvedArticlesObjArrayModified.push({
         refNumber: article.refNumber,
