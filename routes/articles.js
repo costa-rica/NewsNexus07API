@@ -198,13 +198,15 @@ router.post("/", authenticateToken, async (req, res) => {
 router.get("/approved", authenticateToken, async (req, res) => {
   console.log("- GET /articles/approved");
   const startTime = Date.now();
-  const articlesArray = await sqlQueryArticlesApproved();
+  const articlesArray =
+    await sqlQueryArticlesWithStatesApprovedReportContract();
 
   console.log(
     `- articlesArray.length (before filtering): ${articlesArray.length}`
   );
+
   const approvedArticlesArray = articlesArray.filter(
-    (article) => article.ArticleApproveds.length > 0
+    (article) => article.ArticleApproveds?.length > 0
   );
 
   const approvedArticlesArrayModified = approvedArticlesArray.map((article) => {
@@ -212,10 +214,6 @@ router.get("/approved", authenticateToken, async (req, res) => {
       return {
         ...article,
         isSubmitted: "Yes",
-        // articleReferenceNumberInReport:
-        //   article.ArticleReportContracts[
-        //     article.ArticleReportContracts.length - 1
-        //   ].articleReferenceNumberInReport,
       };
     }
     return {
@@ -229,20 +227,10 @@ router.get("/approved", authenticateToken, async (req, res) => {
   );
 
   const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
-  // res.json({ articlesArray4: approvedArticlesArray });
   res.json({
     articlesArray: approvedArticlesArrayModified,
     timeToRenderResponseFromApiInSeconds,
   });
-  // const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
-  // console.log(
-  //   `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
-  // );
-
-  // res.json({
-  //   articlesArray: articlesArrayModified,
-  //   timeToRenderResponseFromApiInSeconds,
-  // });
 });
 
 // 🔹 GET /articles/approved-old
