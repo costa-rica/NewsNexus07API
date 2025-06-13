@@ -141,7 +141,7 @@ router.post("/create", authenticateToken, async (req, res) => {
     const xlsxFilename = await createXlsxForReport(filteredArticles);
     createReportPdfFiles(filteredArticles); // Generate PDFs for each article
     await createReportZipFile(xlsxFilename, zipFilename);
-    report.reportName = zipFilename;
+    report.nameZipFile = zipFilename;
     await report.save();
 
     res.json({ message: "CSV created", zipFilename });
@@ -199,7 +199,7 @@ router.delete("/:reportId", authenticateToken, async (req, res) => {
     // Delete report and associated files
     await report.destroy();
     const reportsDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
-    const filePath = path.join(reportsDir, report.reportName);
+    const filePath = path.join(reportsDir, report.nameZipFile);
     if (reportsDir) {
       console.log(`- Deleting report file: ${filePath}`);
       if (fs.existsSync(filePath)) {
@@ -241,7 +241,7 @@ router.get("/download/:reportId", authenticateToken, async (req, res) => {
 
     // const filePath = path.join(backupDir, filename);
 
-    const filePath = path.join(reportsDir, report.reportName);
+    const filePath = path.join(reportsDir, report.nameZipFile);
     console.log(`filePath: ${filePath}`);
 
     // Check if file exists
@@ -253,11 +253,11 @@ router.get("/download/:reportId", authenticateToken, async (req, res) => {
 
     console.log(`Sending file: ${filePath}`);
     // const filename = path.basename(report.pathToReport);
-    console.log(`filename: ${report.reportName}`);
+    console.log(`filename: ${report.nameZipFile}`);
     // res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${report.reportName}"`
+      `attachment; filename="${report.nameZipFile}"`
     );
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     // res.download(filePath, filename, (err) => {
