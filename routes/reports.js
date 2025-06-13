@@ -411,6 +411,13 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
       .status(404)
       .json({ result: false, message: "Report not found." });
   }
+
+  const reportOriginalSubmittedDate =
+    reportOriginal.dateSubmittedToClient.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "numeric", // no leading zero
+      day: "numeric", // no leading zero
+    });
   // get report Cr name
   const reportCrName = reportOriginal.nameCrFormat;
   // create a new report with the same cr name but different bunddle name
@@ -491,14 +498,15 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
     try {
       approvedArticlesObjArrayModified.push({
         refNumber: approvedArticleObj.refNumber,
-        submitted: reportOriginal.dateSubmittedToClient.toLocaleDateString(
-          "en-US",
-          {
-            year: "numeric",
-            month: "numeric", // no leading zero
-            day: "numeric", // no leading zero
-          }
-        ),
+        // submitted: reportOriginal.dateSubmittedToClient.toLocaleDateString(
+        //   "en-US",
+        //   {
+        //     year: "numeric",
+        //     month: "numeric", // no leading zero
+        //     day: "numeric", // no leading zero
+        //   }
+        // ),
+        submitted: reportOriginalSubmittedDate,
         headline: approvedArticleObj.headlineForPdfReport,
         publication: approvedArticleObj.publicationNameForPdfReport,
         datePublished: new Date(approvedArticleObj.publicationDateForPdfReport),
@@ -535,8 +543,9 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
   res.json({
     result: true,
     message: "Report recreated successfully.",
-    reportNew,
-    articleReportContractsArray,
+    newReportId: reportNew.id,
+    originalReportId: reportOriginal.id,
+    originalReportSubmittedDate: reportOriginalSubmittedDate,
   });
 });
 
