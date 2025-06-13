@@ -6,6 +6,7 @@ const {
   ArticleApproved,
   State,
   ArticleReportContract,
+  ArticleStateContract,
 } = require("newsnexus07db");
 const {
   convertJavaScriptDateToTimezoneString,
@@ -89,6 +90,9 @@ router.post("/create", authenticateToken, async (req, res) => {
   ).dateString; // YYYY-MM-DD
   const datePrefixET = nowET.replace(/[-:]/g, "").slice(2, 8);
   console.log(`datePrefixET: ${datePrefixET}`);
+
+  report.nameCrFormat = `cr${datePrefixET}`;
+  await report.save();
 
   let approvedArticlesObjArrayModified = [];
 
@@ -394,5 +398,146 @@ router.post(
     });
   }
 );
+
+// GET /reports/recreate/:reportId
+router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
+  console.log(`- in GET /reports/recreate/${req.params.reportId}`);
+
+  const reportId = req.params.reportId;
+  const user = req.user;
+  const reportOriginal = await Report.findByPk(reportId);
+  if (!reportOriginal) {
+    return res
+      .status(404)
+      .json({ result: false, message: "Report not found." });
+  }
+  // get report Cr name
+  const reportCrName = reportOriginal.nameCrFormat;
+  // create a new report with the same cr name but different bunddle name
+  const reportNew = await Report.create({
+    nameCrFormat: reportCrName,
+    userId: user.id,
+  });
+  const zipFilename = `report_bundle_${reportNew.id}.zip`;
+  // reportNew.nameZipFile = zipFilename;
+  // await reportNew.save();
+  const nowET = convertJavaScriptDateToTimezoneString(
+    new Date(),
+    "America/New_York"
+  ).dateString; // YYYY-MM-DD
+  const datePrefixET = nowET.replace(/[-:]/g, "").slice(2, 8);
+
+  // get list of Aritcle IDs from the articleReportContract table
+  const articleReportContractsArray = await ArticleReportContract.findAll({
+    where: {
+      reportId: reportOriginal.id,
+    },
+  });
+
+  // console.log(
+  //   `articleReportContractsArray.length: ${articleReportContractsArray.length}`
+  // );
+
+  // get array of articles from the ArticleApproved Table
+  const approvedArticlesArray = await ArticleApproved.findAll({
+    where: {
+      articleId: {
+        [Op.in]: articleReportContractsArray.map((ar) => ar.articleId),
+      },
+    },
+  });
+
+  // console.log(JSON.stringify(approvedArticlesArray, null, 2));
+
+  let approvedArticlesObjArrayModified = [];
+
+  for (let i = 0; i < approvedArticlesArray.length; i++) {
+    const approvedArticleObj = approvedArticlesArray[i];
+    const counter = String(i + 1).padStart(3, "0"); // 001, 002, ...
+    approvedArticleObj.refNumber = `${datePrefixET}${counter}`; // e.g., 250418001
+    // create ArticleReportContract
+    await ArticleReportContract.create({
+      reportId: reportNew.id,
+      articleId: approvedArticleObj.articleId,
+      articleReferenceNumberInReport: approvedArticleObj.refNumber,
+    });
+    let state;
+    // Find all article states in ArticleStateContract Table
+    const articleStateContractsArray = await ArticleStateContract.findAll({
+      where: {
+        articleId: approvedArticleObj.articleId,
+      },
+    });
+    // console.log(JSON.stringify(articleStateContractsArray, null, 2));
+    const stateId = articleStateContractsArray[0].stateId;
+    const stateObj = await State.findByPk(stateId);
+    state = stateObj.abbreviation;
+    // if (article.States?.length > 0) {
+    //   state = article.States[0].abbreviation;
+    // }
+
+    // console.log(
+    //   `article ref date: ${
+    //     approvedArticleObj.refNumber
+    //   } submitted date: ${reportOriginal.dateSubmittedToClient.toLocaleDateString(
+    //     "en-US",
+    //     {
+    //       year: "numeric",
+    //       month: "numeric", // no leading zero
+    //       day: "numeric", // no leading zero
+    //     }
+    //   )} headline: ${approvedArticleObj.headlineForPdfReport}`
+    // );
+    try {
+      approvedArticlesObjArrayModified.push({
+        refNumber: approvedArticleObj.refNumber,
+        submitted: reportOriginal.dateSubmittedToClient.toLocaleDateString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "numeric", // no leading zero
+            day: "numeric", // no leading zero
+          }
+        ),
+        headline: approvedArticleObj.headlineForPdfReport,
+        publication: approvedArticleObj.publicationNameForPdfReport,
+        datePublished: new Date(approvedArticleObj.publicationDateForPdfReport),
+        state,
+        text: approvedArticleObj.textForPdfReport,
+      });
+    } catch (error) {
+      console.log(
+        `Error processing article id ${approvedArticleObj.id}: ${error}`
+      );
+      return res.status(500).json({
+        error: `Error processing article id ${approvedArticleObj.id}: ${error}`,
+      });
+    }
+  }
+
+  // step 2: create a csv file and save to PATH_PROJECT_RESOURCES_REPORTS
+  try {
+    const filteredArticles = approvedArticlesObjArrayModified.filter(Boolean); // remove nulls
+    const xlsxFilename = await createXlsxForReport(filteredArticles);
+    createReportPdfFiles(filteredArticles); // Generate PDFs for each article
+    await createReportZipFile(xlsxFilename, zipFilename);
+    reportNew.nameZipFile = zipFilename;
+    await reportNew.save();
+
+    // res.json({ message: "CSV created", zipFilename });
+  } catch (error) {
+    res.status(500).json({
+      error: `Error creating report: ${error.message}`,
+    });
+  }
+
+  // create a new bundle
+  res.json({
+    result: true,
+    message: "Report recreated successfully.",
+    reportNew,
+    articleReportContractsArray,
+  });
+});
 
 module.exports = router;
