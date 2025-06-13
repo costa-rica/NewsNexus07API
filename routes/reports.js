@@ -428,11 +428,11 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
   const zipFilename = `report_bundle_${reportNew.id}.zip`;
   // reportNew.nameZipFile = zipFilename;
   // await reportNew.save();
-  const nowET = convertJavaScriptDateToTimezoneString(
-    new Date(),
-    "America/New_York"
-  ).dateString; // YYYY-MM-DD
-  const datePrefixET = nowET.replace(/[-:]/g, "").slice(2, 8);
+  // const nowET = convertJavaScriptDateToTimezoneString(
+  //   new Date(),
+  //   "America/New_York"
+  // ).dateString; // YYYY-MM-DD
+  // const datePrefixET = nowET.replace(/[-:]/g, "").slice(2, 8);
 
   // get list of Aritcle IDs from the articleReportContract table
   const articleReportContractsArray = await ArticleReportContract.findAll({
@@ -454,14 +454,17 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
     },
   });
 
-  // console.log(JSON.stringify(approvedArticlesArray, null, 2));
-
   let approvedArticlesObjArrayModified = [];
 
   for (let i = 0; i < approvedArticlesArray.length; i++) {
     const approvedArticleObj = approvedArticlesArray[i];
-    const counter = String(i + 1).padStart(3, "0"); // 001, 002, ...
-    approvedArticleObj.refNumber = `${datePrefixET}${counter}`; // e.g., 250418001
+    const articleReportContractObj = articleReportContractsArray.find(
+      (ar) => ar.articleId === approvedArticleObj.articleId
+    );
+    approvedArticleObj.refNumber =
+      articleReportContractObj.articleReferenceNumberInReport;
+    // const counter = String(i + 1).padStart(3, "0"); // 001, 002, ...
+    // approvedArticleObj.refNumber = `${reportCrName.slice(2)}${counter}`; // e.g., 250418001
     // create ArticleReportContract
     await ArticleReportContract.create({
       reportId: reportNew.id,
@@ -495,17 +498,10 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
     //     }
     //   )} headline: ${approvedArticleObj.headlineForPdfReport}`
     // );
+
     try {
       approvedArticlesObjArrayModified.push({
         refNumber: approvedArticleObj.refNumber,
-        // submitted: reportOriginal.dateSubmittedToClient.toLocaleDateString(
-        //   "en-US",
-        //   {
-        //     year: "numeric",
-        //     month: "numeric", // no leading zero
-        //     day: "numeric", // no leading zero
-        //   }
-        // ),
         submitted: reportOriginalSubmittedDate,
         headline: approvedArticleObj.headlineForPdfReport,
         publication: approvedArticleObj.publicationNameForPdfReport,
@@ -526,7 +522,10 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
   // step 2: create a csv file and save to PATH_PROJECT_RESOURCES_REPORTS
   try {
     const filteredArticles = approvedArticlesObjArrayModified.filter(Boolean); // remove nulls
-    const xlsxFilename = await createXlsxForReport(filteredArticles);
+    const xlsxFilename = await createXlsxForReport(
+      filteredArticles,
+      `${reportCrName}.xlsx`
+    );
     createReportPdfFiles(filteredArticles); // Generate PDFs for each article
     await createReportZipFile(xlsxFilename, zipFilename);
     reportNew.nameZipFile = zipFilename;

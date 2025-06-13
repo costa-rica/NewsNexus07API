@@ -9,7 +9,7 @@ const { convertJavaScriptDateToTimezoneString } = require("./common");
 const { Report } = require("newsnexus07db");
 // const { DateTime } = require("luxon");
 
-async function createXlsxForReport(dataArray) {
+async function createXlsxForReport(dataArray, excelFilename = false) {
   console.log(` 🔹 createXlsxForReport`);
   const outputDir = process.env.PATH_PROJECT_RESOURCES_REPORTS;
   if (!outputDir) {
@@ -23,9 +23,9 @@ async function createXlsxForReport(dataArray) {
       javascriptDate,
       "America/New_York"
     );
-    const fileName = `cr${dateParts.year.slice(2, 4)}${dateParts.month}${
-      dateParts.day
-    }.xlsx`;
+    const fileName =
+      excelFilename ||
+      `cr${dateParts.year.slice(2, 4)}${dateParts.month}${dateParts.day}.xlsx`;
     const filePath = path.join(outputDir, fileName);
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report");
@@ -49,34 +49,16 @@ async function createXlsxForReport(dataArray) {
     ];
 
     worksheet.columns = columns;
+
+    dataArray.sort((a, b) => {
+      const refA = a.refNumber.toString();
+      const refB = b.refNumber.toString();
+      return refA.localeCompare(refB, undefined, { numeric: true });
+    });
+
     dataArray.forEach((row) => {
       worksheet.addRow(row);
     });
-    // dataArray.forEach((row) => {
-    //   const dateParts = convertJavaScriptDateToTimezoneString(
-    //     row.submitted,
-    //     "America/New_York"
-    //   );
-
-    //   // Join into ISO string format
-    //   // const isoString = `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:00`;
-    //   const dateString = `${dateParts.month}/${dateParts.day}/${dateParts.year}`;
-
-    //   // // Let Luxon parse it in ET
-    //   // const dt = DateTime.fromISO(isoString, { zone: "America/New_York" });
-
-    //   // // Convert to JS Date
-    //   // const jsDate = dt.toJSDate(); // This keeps the correct ET time
-
-    //   // Insert into Excel
-    //   const rowCopy = { ...row, submitted: dateString };
-    //   const addedRow = worksheet.addRow(rowCopy);
-
-    //   // Apply Excel date formatting
-    //   const submittedCell = addedRow.getCell("submitted");
-    //   // submittedCell.numFmt = "mm/dd/yyyy hh:mm";
-    //   submittedCell.numFmt = "mm/dd/yyyy";
-    // });
     worksheet.eachRow((row) => {
       row.eachCell((cell) => {
         cell.alignment = { wrapText: false, vertical: "top" };
