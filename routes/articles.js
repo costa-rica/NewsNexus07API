@@ -210,15 +210,15 @@ router.get("/approved", authenticateToken, async (req, res) => {
   );
 
   const approvedArticlesArrayModified = approvedArticlesArray.map((article) => {
-    if (article.ArticleReportContracts.length > 0) {
-      return {
-        ...article,
-        isSubmitted: "Yes",
-      };
-    }
+    const isSubmitted =
+      article.ArticleReportContracts.length > 0 ? "Yes" : "No";
+    const articleHasBeenAcceptedByAll = article.ArticleReportContracts.every(
+      (contract) => contract.articleAcceptedByCpsc === 1
+    );
     return {
       ...article,
-      isSubmitted: "No",
+      isSubmitted,
+      articleHasBeenAcceptedByAll,
     };
   });
 
