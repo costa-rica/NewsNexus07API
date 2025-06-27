@@ -61,9 +61,11 @@ const {
 sequelize
   .sync()
   .then(async () => {
-    console.log("✅ Database connected & synced");
-    await onStartUpCreateEnvUsers(); // <-- Call function here
-    verifyCheckDirectoryExists();
+    if (process.env.NODE_ENV !== "test") {
+      console.log("✅ Database connected & synced");
+      await onStartUpCreateEnvUsers(); // <-- Call function here
+      verifyCheckDirectoryExists();
+    }
   })
   .catch((error) => console.error("Error syncing database:", error));
 
