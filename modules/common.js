@@ -103,15 +103,24 @@ function writeResponseDataFromNewsAggregator(
 function convertDbUtcDateOrStringToEasternString(input) {
   // NOTE: this is useful for converting article.createdAt dates - if not for database seriously ask why am I using it and not createJavaScriptExcelDateObjectEastCoasUs
   let dt;
+  // console.log("input typeof: ");
+  // console.log(typeof input);
+
   if (typeof input === "string") {
-    dt = DateTime.fromISO(input, { zone: "utc" });
+    // console.log("-----> input is string");
+    const sanitized = input.trim().replace(" ", "T").replace(" +", "+");
+    dt = DateTime.fromISO(sanitized, { zone: "utc" });
   } else if (input instanceof Date) {
     dt = DateTime.fromJSDate(input, { zone: "utc" });
   } else {
     return "Invalid";
   }
 
+  // console.log("dt: ");
+  // console.log(dt);
+
   return dt.setZone("America/New_York").toFormat("yyyy-MM-dd HH:mm");
+  // return dt.setZone("America/New_York");
 }
 
 function getMostRecentEasternFriday() {

@@ -318,12 +318,12 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.stateId) {
       hasStateAssigned++;
     }
-    // const articleDateStr = convertDbUtcDateOrStringToEasternString(
-    //   article.createdAt
-    // ).split(" ")[0];
-    // if (articleDateStr === yesterdayEastCoastDateStr) {
-    //   addedYesterday++;
-    // }
+    const articleDateStr = convertDbUtcDateOrStringToEasternString(
+      article.createdAt
+    ).split(" ")[0];
+    if (articleDateStr === yesterdayEastCoastDateStr) {
+      addedYesterday++;
+    }
     // if (
     //   article.approvalCreatedAt &&
     //   DateTime.fromJSDate(new Date(article.approvalCreatedAt), {
@@ -351,7 +351,30 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
 
 router.get("/summary-stats-test", async (req, res) => {
   const articlesArray = await sqlQueryArticlesSummaryStatistics();
-  res.json({ articlesArray: articlesArray.splice(0, 120) });
+
+  const yesterdayEastCoastDateStr = DateTime.now()
+    .setZone("America/New_York")
+    .minus({ days: 1 })
+    .toISODate(); // e.g. "2025-05-12"
+
+  const createdAtThing = articlesArray[0].createdAt;
+  console.log(
+    `createdAtThing: ${createdAtThing} typeof: ${typeof createdAtThing}`
+  );
+
+  const articleDateStr = convertDbUtcDateOrStringToEasternString(
+    articlesArray[0].createdAt
+  ).split(" ")[0];
+  // const articleDateStr = convertDbUtcDateOrStringToEasternString(
+  //   articlesArray[0].createdAt
+  // );
+
+  res.json({
+    yesterdayEastCoastDateStr,
+    articleDateStr,
+    createdAtThing,
+    articlesArray: articlesArray.splice(0, 120),
+  });
 });
 
 // 🔹 POST /add-article
