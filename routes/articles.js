@@ -140,97 +140,6 @@ router.get("/approved", authenticateToken, async (req, res) => {
   });
 });
 
-// // 🔹 GET /articles/approved-old
-// router.get("/approved-old", authenticateToken, async (req, res) => {
-//   console.log("- GET /articles/approved-old");
-//   const startTime = Date.now();
-//   const articlesArray = await sqlQueryArticlesApproved();
-
-//   const articlesMap = new Map();
-
-//   for (const row of articlesArray) {
-//     if (!articlesMap.has(row.articleId)) {
-//       articlesMap.set(row.articleId, {
-//         id: row.articleId,
-//         title: row.title,
-//         description: row.description,
-//         publishedDate: row.publishedDate,
-//         createdAt: row.createdAt,
-//         url: row.url,
-//         States: [],
-//         ArticleReportContracts: [],
-//       });
-//     }
-
-//     const article = articlesMap.get(row.articleId);
-
-//     if (row.stateId && !article.States.some((s) => s.id === row.stateId)) {
-//       article.States.push({ id: row.stateId, name: row.stateName });
-//     }
-
-//     if (row.reportContractId) {
-//       article.ArticleReportContracts.push({
-//         id: row.reportContractId,
-//         articleReferenceNumberInReport: row.articleReferenceNumberInReport,
-//       });
-//     }
-//   }
-
-//   const articlesArrayModified = Array.from(articlesMap.values()).map(
-//     (article) => ({
-//       ...article,
-//       isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
-//       articleReferenceNumberInReport:
-//         article.ArticleReportContracts.length > 0
-//           ? article.ArticleReportContracts[
-//               article.ArticleReportContracts.length - 1
-//             ].articleReferenceNumberInReport
-//           : "N/A",
-//     })
-//   );
-
-//   // /// ---- Start  OLD Logic ------
-//   // // Filter in JavaScript based on related tables
-//   // const articlesArrayFiltered = articlesArray.filter((article) => {
-//   //   // Filter out not approved if requested
-//   //   if (article.ArticleApproveds && article.ArticleApproveds.length > 0) {
-//   //     return true;
-//   //   }
-//   //   return false;
-//   // });
-
-//   // const articlesArrayModified = articlesArrayFiltered.map((article) => {
-//   //   // const states = article.States.map((state) => state.name).join(", ");
-//   //   return {
-//   //     ...article.dataValues,
-//   //     isSubmitted: article.ArticleReportContracts.length > 0 ? "Yes" : "No",
-//   //     articleReferenceNumberInReport:
-//   //       article.ArticleReportContracts.length > 0
-//   //         ? article.ArticleReportContracts[
-//   //             article.ArticleReportContracts.length - 1
-//   //           ].articleReferenceNumberInReport
-//   //         : "N/A",
-//   //   };
-//   // });
-
-//   // /// ---- End  OLD Logic ------
-
-//   console.log(
-//     "- articlesArrayFiltered.length (after filtering):",
-//     articlesArrayModified.length
-//   );
-
-//   const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
-//   console.log(
-//     `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
-//   );
-
-//   res.json({
-//     articlesArray: articlesArrayModified,
-//     timeToRenderResponseFromApiInSeconds,
-//   });
-// });
-
 // 🔹 POST /articles/update-approved
 router.post("/update-approved", async (req, res) => {
   const { articleId, contentToUpdate } = req.body;
@@ -259,19 +168,6 @@ router.post("/update-approved", async (req, res) => {
 
   return res.json({ result: true, articleApprovedArrayModified });
 });
-
-// router.get("/approved-test", async (req, res) => {
-//   const articlesArray =
-//     await sqlQueryArticlesWithStatesApprovedReportContract();
-//   // console.log(articlesArray);
-//   // const articlesArray = await sqlQueryArticles();
-//   let article45 = articlesArray.find((article) => article.id === 45);
-//   console.log("article45: ", article45);
-//   res.json({
-//     articlesArray: article45,
-//     articlesArrayLength: articlesArray.length,
-//   });
-// });
 
 // 🔹 POST /articles/user-toggle-is-not-relevant/:articleId
 router.post(
@@ -401,7 +297,8 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     .minus({ days: 1 })
     .toISODate(); // e.g. "2025-05-12"
   let addedYesterday = 0;
-  let approvedThisWeek = 0;
+  // let approvedThisWeek = 0;
+  let approvedButNotInReport = 0;
   // console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
   const reportArray = await Report.findAll({});
   const lastReport = reportArray[reportArray.length - 1];
@@ -421,19 +318,22 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.stateId) {
       hasStateAssigned++;
     }
-    const articleDateStr = convertDbUtcDateOrStringToEasternString(
-      article.createdAt
-    ).split(" ")[0];
-    if (articleDateStr === yesterdayEastCoastDateStr) {
-      addedYesterday++;
-    }
-    if (
-      article.approvalCreatedAt &&
-      DateTime.fromJSDate(new Date(article.approvalCreatedAt), {
-        zone: "utc",
-      }).setZone("America/New_York") >= dayAfterSubmission
-    ) {
-      approvedThisWeek++;
+    // const articleDateStr = convertDbUtcDateOrStringToEasternString(
+    //   article.createdAt
+    // ).split(" ")[0];
+    // if (articleDateStr === yesterdayEastCoastDateStr) {
+    //   addedYesterday++;
+    // }
+    // if (
+    //   article.approvalCreatedAt &&
+    //   DateTime.fromJSDate(new Date(article.approvalCreatedAt), {
+    //     zone: "utc",
+    //   }).setZone("America/New_York") >= dayAfterSubmission
+    // ) {
+    //   approvedThisWeek++;
+    // }
+    if (!article.reportId && article.approvalCreatedAt) {
+      approvedButNotInReport++;
     }
   });
 
@@ -443,9 +343,15 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     articlesIsApprovedCount,
     hasStateAssigned,
     addedYesterday,
-    approvedThisWeek,
+    // approvedThisWeek,
+    approvedButNotInReport,
   };
   res.json({ summaryStatistics });
+});
+
+router.get("/summary-stats-test", async (req, res) => {
+  const articlesArray = await sqlQueryArticlesSummaryStatistics();
+  res.json({ articlesArray: articlesArray.splice(0, 120) });
 });
 
 // 🔹 POST /add-article

@@ -104,12 +104,14 @@ async function sqlQueryArticlesSummaryStatistics() {
     a."createdAt",
     ar."isRelevant",
     aa."createdAt" AS "approvalCreatedAt",
-    s.id AS "stateId"
+    s.id AS "stateId",
+    arc."reportId"
   FROM "Articles" a
   LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
   LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
   LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
-  LEFT JOIN "States" s ON s.id = asc."stateId";
+  LEFT JOIN "States" s ON s.id = asc."stateId"
+  LEFT JOIN "ArticleReportContracts" arc ON arc."articleId" = a.id;
 `;
 
   const results = await sequelize.query(sql, {
