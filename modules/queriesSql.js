@@ -513,7 +513,7 @@ async function sqlQueryArticlesWithStatesApprovedReportContract() {
   return Array.from(articlesMap.values());
 }
 
-async function sqlQueryAritclesForWithRatingsRoute(
+async function sqlQueryArticlesForWithRatingsRoute(
   returnOnlyThisCreatedAtDateOrAfter,
   returnOnlyThisPublishedDateOrAfter
 ) {
@@ -772,5 +772,5 @@ module.exports = {
   // sqlQueryArticlesWithStates,
   // sqlQueryArticlesWithStatesApproved,
   sqlQueryArticlesWithStatesApprovedReportContract,
-  sqlQueryAritclesForWithRatingsRoute,
+  sqlQueryArticlesForWithRatingsRoute,
 };
