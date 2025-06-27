@@ -32,12 +32,9 @@ const path = require("path");
 const fs = require("fs");
 const {
   sqlQueryArticlesOld,
-  sqlQueryArticlesSummaryStatistics,
-  sqlQueryArticlesApproved,
-  sqlQueryArticlesWithRatings,
-  sqlQueryArticlesWithStates,
   sqlQueryArticles,
-  sqlQueryArticlesWithStatesApproved,
+  sqlQueryArticlesSummaryStatistics,
+  sqlQueryArticlesWithRatings,
   sqlQueryArticlesWithStatesApprovedReportContract,
 } = require("../modules/queriesSql");
 
@@ -51,39 +48,10 @@ router.post("/", authenticateToken, async (req, res) => {
     returnOnlyIsRelevant,
   } = req.body;
 
-  const articlesArray = await sqlQueryArticlesOld({
+  // const articlesArray = await sqlQueryArticlesOld({
+  const articlesArray = await sqlQueryArticles({
     publishedDate: returnOnlyThisPublishedDateOrAfter,
   });
-
-  // const { Op } = require("sequelize");
-
-  // const whereClause = {};
-
-  // // Apply publishedDate filter if provided
-  // if (returnOnlyThisPublishedDateOrAfter) {
-  //   whereClause.publishedDate = {
-  //     [Op.gte]: new Date(returnOnlyThisPublishedDateOrAfter),
-  //   };
-  // }
-
-  // const articlesArray = await Article.findAll({
-  //   where: whereClause,
-  //   include: [
-  //     {
-  //       model: State,
-  //       through: { attributes: [] },
-  //     },
-  //     {
-  //       model: ArticleIsRelevant,
-  //     },
-  //     {
-  //       model: ArticleApproved,
-  //     },
-  //     {
-  //       model: NewsApiRequest,
-  //     },
-  //   ],
-  // });
 
   console.log(
     "- articlesArray.length (before filtering):",
@@ -127,70 +95,8 @@ router.post("/", authenticateToken, async (req, res) => {
     }
   }
 
-  const articlesArrayGrouped = Array.from(articlesMap.values());
-  // // ----- START OLD code
-  // const articlesArrayFiltered = articlesArray.filter((article) => {
-  //   // Filter out not approved if requested
-  //   if (
-  //     returnOnlyIsNotApproved &&
-  //     article.ArticleApproveds &&
-  //     article.ArticleApproveds.length > 0
-  //   ) {
-  //     return false;
-  //   }
+  let articlesArrayGrouped = Array.from(articlesMap.values());
 
-  //   // Filter out not relevant if requested
-  //   if (
-  //     returnOnlyIsRelevant &&
-  //     article.ArticleIsRelevants &&
-  //     article.ArticleIsRelevants.some((entry) => entry.isRelevant === false)
-  //   ) {
-  //     return false;
-  //   }
-
-  //   return true;
-  // });
-
-  // console.log(
-  //   "- articlesArrayFiltered.length (after filtering):",
-  //   articlesArrayFiltered.length
-  // );
-
-  // const articlesArrayModified = articlesArrayFiltered.map((article) => {
-  //   const statesStringCommaSeparated = article.States.map(
-  //     (state) => state.name
-  //   ).join(", ");
-  //   const isRelevant =
-  //     !article.ArticleIsRelevants ||
-  //     article.ArticleIsRelevants.every((entry) => entry.isRelevant !== false);
-  //   const isApproved =
-  //     article.ArticleApproveds &&
-  //     article.ArticleApproveds.some((entry) => entry.userId !== null);
-
-  //   let keyword = "";
-  //   if (article.NewsApiRequest?.andString)
-  //     keyword += `AND ${article.NewsApiRequest.andString}`;
-  //   if (article.NewsApiRequest?.orString)
-  //     keyword += ` OR ${article.NewsApiRequest.orString}`;
-  //   if (article.NewsApiRequest?.notString)
-  //     keyword += ` NOT ${article.NewsApiRequest.notString}`;
-
-  //   return {
-  //     // ...article.dataValues,
-  //     id: article.id,
-  //     title: article.title,
-  //     description: article.description,
-  //     publishedDate: article.publishedDate,
-  //     url: article.url,
-  //     statesStringCommaSeparated,
-  //     States: article.States,
-  //     isRelevant,
-  //     isApproved,
-  //     keyword,
-  //   };
-  // });
-  // // ----- END OLD code -----
-  // res.json({ articlesArray: articlesArrayModified });
   res.json({ articlesArray: articlesArrayGrouped });
 });
 
