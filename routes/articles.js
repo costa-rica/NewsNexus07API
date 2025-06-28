@@ -38,8 +38,10 @@ const {
   // sqlQueryArticlesWithRatings,
   sqlQueryArticlesWithStatesApprovedReportContract,
   sqlQueryArticlesForWithRatingsRoute,
+  sqlQueryArticlesWithStates,
 } = require("../modules/queriesSql");
 
+// NOTE: ---- > will need ot refactor becuase sqlQueryArticles is changed
 // 🔹 POST /articles: filtered list of articles
 router.post("/", authenticateToken, async (req, res) => {
   console.log("- POST /articles");
@@ -269,6 +271,39 @@ router.post("/approve/:articleId", authenticateToken, async (req, res) => {
 
 // 🔹 GET /articles/summary-statistics
 router.get("/summary-statistics", authenticateToken, async (req, res) => {
+  // Article count AND Article count since last Thursday at 20h
+  const articlesArray = await sqlQueryArticles({});
+  let articlesCount = articlesArray.length;
+  let articlesSinceLastThursday20hEst = 0;
+  const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
+
+  articlesArray.map((article) => {
+    const articleCreatedAtDate = new Date(article.createdAt);
+    if (articleCreatedAtDate >= lastThursday20hEst) {
+      articlesSinceLastThursday20hEst++;
+    }
+  });
+
+  // Article count with states
+  const articlesArrayIncludeStates = await sqlQueryArticlesWithStates();
+  const articlesArrayWithStatesSubset = articlesArrayIncludeStates.filter(
+    (article) => article.stateId
+  );
+  const uniqueArticleIdsWithStatesSubset = [
+    ...new Set(
+      articlesArrayWithStatesSubset.map((article) => article.articleId)
+    ),
+  ];
+
+  res.json({
+    articlesCount,
+    articlesSinceLastThursday20hEst,
+    articlesCountWithStates: uniqueArticleIdsWithStatesSubset.length,
+  });
+});
+
+// 🔹 GET /articles/summary-statistics-obe
+router.get("/summary-statistics-obe", authenticateToken, async (req, res) => {
   const articlesArray = await sqlQueryArticles({});
   const articlesArrayWithSummaryStatistics =
     await sqlQueryArticlesSummaryStatistics();
