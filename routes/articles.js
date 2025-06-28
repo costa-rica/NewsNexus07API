@@ -32,13 +32,14 @@ const { createSpreadsheetFromArray } = require("../modules/excelExports");
 const path = require("path");
 const fs = require("fs");
 const {
-  sqlQueryArticlesOld,
   sqlQueryArticles,
   sqlQueryArticlesSummaryStatistics,
   // sqlQueryArticlesWithRatings,
   sqlQueryArticlesWithStatesApprovedReportContract,
   sqlQueryArticlesForWithRatingsRoute,
   sqlQueryArticlesWithStates,
+  sqlQueryArticlesApproved,
+  sqlQueryArticlesReport,
 } = require("../modules/queriesSql");
 
 // NOTE: ---- > will need ot refactor becuase sqlQueryArticles is changed
@@ -295,10 +296,44 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     ),
   ];
 
+  // Approved articles
+  const articlesArrayApproved = await sqlQueryArticlesApproved();
+
+  const uniqueArticleIdsApprovedSubset = [
+    ...new Set(articlesArrayApproved.map((article) => article.articleId)),
+  ];
+
+  const articlesInReportArray = await sqlQueryArticlesReport();
+
+  // articlesInReportArray.map((article) => {
+  //   if (article.articleId === 27369) {
+  //     console.log(article);
+  //   }
+  // });
+
+  // Get all articleIds from articles in report
+  const articleIdsInReport = [];
+  articlesInReportArray.map((article) => {
+    if (article.reportId) {
+      articleIdsInReport.push(article.articleId);
+    }
+  });
+
+  let approvedButNotInReport = [];
+  articlesArrayApproved.map((article) => {
+    if (!articleIdsInReport.includes(article.articleId)) {
+      approvedButNotInReport.push(article);
+    }
+  });
+
   res.json({
-    articlesCount,
-    articlesSinceLastThursday20hEst,
-    articlesCountWithStates: uniqueArticleIdsWithStatesSubset.length,
+    summaryStatistics: {
+      articlesCount,
+      articlesSinceLastThursday20hEst,
+      articleHasStateCount: uniqueArticleIdsWithStatesSubset.length,
+      articleIsApprovedCount: uniqueArticleIdsApprovedSubset.length,
+      approvedButNotInReportCount: approvedButNotInReport.length,
+    },
   });
 });
 
@@ -352,33 +387,10 @@ router.get("/summary-statistics-obe", authenticateToken, async (req, res) => {
 
 // 🔹 GET /articles/summary-stats-test
 router.get("/summary-stats-test", async (req, res) => {
-  const articlesArray = await sqlQueryArticlesSummaryStatistics();
-
-  let articlesSinceLastThursday20hEst = 0;
-  const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
-  console.log(
-    `lastThursday20hEst: ${lastThursday20hEst} typeof: ${typeof lastThursday20hEst}`
-  );
-
-  articlesArray.map((article) => {
-    if (article.articleId === 1) {
-      console.log(
-        `article.createdAt: ${new Date(
-          article.createdAt
-        )} typeof: ${typeof new Date(article.createdAt)}`
-      );
-    }
-    const articleCreatedAtDate = new Date(article.createdAt);
-
-    if (articleCreatedAtDate >= lastThursday20hEst) {
-      articlesSinceLastThursday20hEst++;
-    }
-  });
+  const articlesInReportArray = await sqlQueryArticlesReport();
 
   res.json({
-    lastThursday20hEst,
-    articlesSinceLastThursday20hEst,
-    articlesArray: articlesArray.splice(0, 120),
+    articlesInReportArray: articlesInReportArray.splice(0, 120),
   });
 });
 

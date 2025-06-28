@@ -42,26 +42,6 @@ async function sqlQueryArticlesSummaryStatistics() {
 }
 
 async function sqlQueryArticlesApproved() {
-  // ------ NOTE -----------------------------------
-  //  const articlesArray = await Article.findAll({
-  //   include: [
-  //     {
-  //       model: State,
-  //       through: { attributes: [] },
-  //     },
-  //     {
-  //       model: ArticleIsRelevant,
-  //     },
-  //     {
-  //       model: ArticleApproved,
-  //     },
-  //     {
-  //       model: NewsApiRequest,
-  //     },
-  //     { model: ArticleReportContract },
-  //   ],
-  // });
-  // -----------------------------------------
   const sql = `
     SELECT
       a.id AS "articleId",
@@ -70,16 +50,9 @@ async function sqlQueryArticlesApproved() {
       a."publishedDate",
       a."createdAt",
       a.url,
-      s.id AS "stateId",
-      s.name AS "stateName",
-      aa."userId" AS "approvedByUserId",
-      arc.id AS "reportContractId",
-      arc."articleReferenceNumberInReport"
+      aa."userId" AS "approvedByUserId"
     FROM "Articles" a
-    LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
-    LEFT JOIN "States" s ON s.id = asc."stateId"
     INNER JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
-    LEFT JOIN "ArticleReportContracts" arc ON arc."articleId" = a.id
     ORDER BY a.id;
   `;
 
@@ -722,6 +695,38 @@ async function sqlQueryArticlesForWithRatingsRoute(
   // return results;
 }
 
+async function sqlQueryArticlesReport() {
+  const sql = `
+  SELECT
+    a.id AS "articleId",
+    a.title,
+    a.description,
+    a.publishedDate,
+    a.createdAt,
+    a.publicationName,
+    a.url,
+    a.author,
+    a.urlToImage,
+    a.entityWhoFoundArticleId,
+    a.newsApiRequestId,
+    a.newsRssRequestId,
+    arc.id AS "reportContractId",
+    arc."reportId",
+    r.id AS "reportId",
+    r."createdAt" AS "reportCreatedAt"
+  FROM "Articles" a
+  LEFT JOIN "ArticleReportContracts" arc ON arc."articleId" = a.id
+  LEFT JOIN "Reports" r ON r.id = arc."reportId"
+  ORDER BY a.id;
+`;
+
+  const flatResults = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  return flatResults;
+}
+
 module.exports = {
   sqlQueryArticles,
   sqlQueryArticlesOld,
@@ -735,4 +740,5 @@ module.exports = {
   sqlQueryArticlesWithStatesApprovedReportContract,
   sqlQueryArticlesForWithRatingsRoute,
   sqlQueryArticlesWithStates,
+  sqlQueryArticlesReport,
 };
