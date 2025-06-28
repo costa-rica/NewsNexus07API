@@ -129,6 +129,49 @@ function getMostRecentEasternFriday() {
   return now.minus({ days: daysSinceFriday }).startOf("day").toJSDate();
 }
 
+// function getLastThursdayAt20h() {
+//   const now = new Date();
+//   const result = new Date(now);
+
+//   // Set to today at 20:00
+//   result.setHours(20, 0, 0, 0);
+
+//   // Get the current day of the week (0 = Sunday, 1 = Monday, ..., 4 = Thursday, ..., 6 = Saturday)
+//   const currentDay = result.getDay();
+
+//   // Calculate how many days to go back to get to Thursday (4)
+//   let daysToSubtract = (currentDay - 4 + 7) % 7;
+//   if (daysToSubtract === 0 && now < result) {
+//     // It's Thursday but before 20h, go back one week
+//     daysToSubtract = 7;
+//   }
+
+//   result.setDate(result.getDate() - daysToSubtract);
+//   return result;
+// }
+
+function getLastThursdayAt20hInNyTimeZone() {
+  const now = DateTime.now().setZone("America/New_York");
+
+  // Find how many days to subtract to get to the most recent Thursday
+  const daysToSubtract = now.weekday >= 5 ? now.weekday - 4 : now.weekday + 3;
+
+  let target = now.minus({ days: daysToSubtract }).set({
+    hour: 20,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+  });
+
+  // If it's Thursday but before 20h, subtract an extra 7 days
+  if (now.weekday === 4 && now < target) {
+    target = target.minus({ days: 7 });
+  }
+
+  // Convert to a native JavaScript Date object
+  return target.toJSDate();
+}
+
 function convertJavaScriptDateToTimezoneString(javascriptDate, tzString) {
   // NOTE: this returns an object (in tzString) with the following properties:
   // dateParts {
@@ -187,4 +230,6 @@ module.exports = {
   getMostRecentEasternFriday,
   convertJavaScriptDateToTimezoneString,
   createJavaScriptExcelDateObjectEastCoasUs,
+  // getLastThursdayAt20h,
+  getLastThursdayAt20hInNyTimeZone,
 };

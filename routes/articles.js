@@ -24,7 +24,8 @@ const {
 } = require("../modules/articles");
 const {
   convertDbUtcDateOrStringToEasternString,
-  // getMostRecentEasternFriday,
+  // getLastThursdayAt20h,
+  getLastThursdayAt20hInNyTimeZone,
 } = require("../modules/common");
 const { DateTime } = require("luxon");
 const { createSpreadsheetFromArray } = require("../modules/excelExports");
@@ -292,14 +293,16 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
   let articlesIsRelevantCount = 0;
   let articlesIsApprovedCount = 0;
   let hasStateAssigned = 0;
-  const yesterdayEastCoastDateStr = DateTime.now()
-    .setZone("America/New_York")
-    .minus({ days: 1 })
-    .toISODate(); // e.g. "2025-05-12"
-  let addedYesterday = 0;
+  // const yesterdayEastCoastDateStr = DateTime.now()
+  //   .setZone("America/New_York")
+  //   .minus({ days: 1 })
+  //   .toISODate(); // e.g. "2025-05-12"
+  // let addedYesterday = 0;
   // let approvedThisWeek = 0;
   let approvedButNotInReport = 0;
   // console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
+  let articlesSinceLastThursday20hEst = 0;
+  const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
   const reportArray = await Report.findAll({});
   const lastReport = reportArray[reportArray.length - 1];
   const dayAfterSubmission = DateTime.fromJSDate(
@@ -318,11 +321,15 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.stateId) {
       hasStateAssigned++;
     }
-    const articleDateStr = convertDbUtcDateOrStringToEasternString(
-      article.createdAt
-    ).split(" ")[0];
-    if (articleDateStr === yesterdayEastCoastDateStr) {
-      addedYesterday++;
+    // const articleDateStr = convertDbUtcDateOrStringToEasternString(
+    //   article.createdAt
+    // ).split(" ")[0];
+    // if (articleDateStr === yesterdayEastCoastDateStr) {
+    //   addedYesterday++;
+    // }
+    const articleCreatedAtDate = new Date(article.createdAt);
+    if (articleCreatedAtDate >= lastThursday20hEst) {
+      articlesSinceLastThursday20hEst++;
     }
     // if (
     //   article.approvalCreatedAt &&
@@ -342,37 +349,42 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     articlesIsRelevantCount,
     articlesIsApprovedCount,
     hasStateAssigned,
-    addedYesterday,
+    // addedYesterday,
+    articlesSinceLastThursday20hEst,
     // approvedThisWeek,
     approvedButNotInReport,
   };
   res.json({ summaryStatistics });
 });
 
+// 🔹 GET /articles/summary-stats-test
 router.get("/summary-stats-test", async (req, res) => {
   const articlesArray = await sqlQueryArticlesSummaryStatistics();
 
-  const yesterdayEastCoastDateStr = DateTime.now()
-    .setZone("America/New_York")
-    .minus({ days: 1 })
-    .toISODate(); // e.g. "2025-05-12"
-
-  const createdAtThing = articlesArray[0].createdAt;
+  let articlesSinceLastThursday20hEst = 0;
+  const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
   console.log(
-    `createdAtThing: ${createdAtThing} typeof: ${typeof createdAtThing}`
+    `lastThursday20hEst: ${lastThursday20hEst} typeof: ${typeof lastThursday20hEst}`
   );
 
-  const articleDateStr = convertDbUtcDateOrStringToEasternString(
-    articlesArray[0].createdAt
-  ).split(" ")[0];
-  // const articleDateStr = convertDbUtcDateOrStringToEasternString(
-  //   articlesArray[0].createdAt
-  // );
+  articlesArray.map((article) => {
+    if (article.articleId === 1) {
+      console.log(
+        `article.createdAt: ${new Date(
+          article.createdAt
+        )} typeof: ${typeof new Date(article.createdAt)}`
+      );
+    }
+    const articleCreatedAtDate = new Date(article.createdAt);
+
+    if (articleCreatedAtDate >= lastThursday20hEst) {
+      articlesSinceLastThursday20hEst++;
+    }
+  });
 
   res.json({
-    yesterdayEastCoastDateStr,
-    articleDateStr,
-    createdAtThing,
+    lastThursday20hEst,
+    articlesSinceLastThursday20hEst,
     articlesArray: articlesArray.splice(0, 120),
   });
 });
