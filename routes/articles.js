@@ -269,49 +269,21 @@ router.post("/approve/:articleId", authenticateToken, async (req, res) => {
 
 // 🔹 GET /articles/summary-statistics
 router.get("/summary-statistics", authenticateToken, async (req, res) => {
-  // const articlesArray = await Article.findAll({
-  //   include: [
-  //     {
-  //       model: State,
-  //       through: { attributes: [] }, // omit ArticleStateContract from result
-  //     },
-  //     {
-  //       model: ArticleIsRelevant,
-  //     },
-  //     {
-  //       model: ArticleApproved,
-  //     },
-  //   ],
-  // });
-  const articlesArray = await sqlQueryArticlesSummaryStatistics();
-  // console.log(
-  //   "-- [summary-statistics] articlesArray.length:",
-  //   articlesArray.length
-  // );
+  const articlesArray = await sqlQueryArticles({});
+  const articlesArrayWithSummaryStatistics =
+    await sqlQueryArticlesSummaryStatistics();
 
-  let articlesCount = 0;
+  let articlesCount = articlesArray.length;
   let articlesIsRelevantCount = 0;
   let articlesIsApprovedCount = 0;
   let hasStateAssigned = 0;
-  // const yesterdayEastCoastDateStr = DateTime.now()
-  //   .setZone("America/New_York")
-  //   .minus({ days: 1 })
-  //   .toISODate(); // e.g. "2025-05-12"
-  // let addedYesterday = 0;
-  // let approvedThisWeek = 0;
+
   let approvedButNotInReport = 0;
-  // console.log(`yesterdayEastCoastDateStr: ${yesterdayEastCoastDateStr}`);
   let articlesSinceLastThursday20hEst = 0;
   const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
-  const reportArray = await Report.findAll({});
-  const lastReport = reportArray[reportArray.length - 1];
-  const dayAfterSubmission = DateTime.fromJSDate(
-    lastReport.dateSubmittedToClient,
-    { zone: "America/New_York" }
-  ).plus({ days: 1 });
 
-  articlesArray.map((article) => {
-    articlesCount++;
+  articlesArrayWithSummaryStatistics.map((article) => {
+    // articlesCount++;
     if (article.isRelevant !== false) {
       articlesIsRelevantCount++;
     }
@@ -321,24 +293,12 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     if (article.stateId) {
       hasStateAssigned++;
     }
-    // const articleDateStr = convertDbUtcDateOrStringToEasternString(
-    //   article.createdAt
-    // ).split(" ")[0];
-    // if (articleDateStr === yesterdayEastCoastDateStr) {
-    //   addedYesterday++;
-    // }
+
     const articleCreatedAtDate = new Date(article.createdAt);
     if (articleCreatedAtDate >= lastThursday20hEst) {
       articlesSinceLastThursday20hEst++;
     }
-    // if (
-    //   article.approvalCreatedAt &&
-    //   DateTime.fromJSDate(new Date(article.approvalCreatedAt), {
-    //     zone: "utc",
-    //   }).setZone("America/New_York") >= dayAfterSubmission
-    // ) {
-    //   approvedThisWeek++;
-    // }
+
     if (!article.reportId && article.approvalCreatedAt) {
       approvedButNotInReport++;
     }
@@ -349,9 +309,7 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     articlesIsRelevantCount,
     articlesIsApprovedCount,
     hasStateAssigned,
-    // addedYesterday,
     articlesSinceLastThursday20hEst,
-    // approvedThisWeek,
     approvedButNotInReport,
   };
   res.json({ summaryStatistics });
