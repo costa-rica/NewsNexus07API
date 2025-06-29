@@ -232,49 +232,6 @@ async function sqlQueryArticles({ publishedDate }) {
 
   return results;
 }
-// async function sqlQueryArticlesReference({ publishedDate }) {
-//   const replacements = {};
-//   const whereClauses = [];
-
-//   if (publishedDate) {
-//     whereClauses.push(`a."publishedDate" >= :publishedDate`);
-//     replacements.publishedDate = publishedDate;
-//   }
-
-//   const whereString =
-//     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
-
-//   const sql = `
-//       SELECT
-//         a.id AS "articleId",
-//         a.title,
-//         a.description,
-//         a."publishedDate",
-//         a.url,
-//         s.id AS "stateId",
-//         s.name AS "stateName",
-//         ar."isRelevant",
-//         aa."userId" AS "approvedByUserId",
-//         nar."andString",
-//         nar."orString",
-//         nar."notString"
-//       FROM "Articles" a
-//       LEFT JOIN "ArticleStateContracts" asc ON a.id = asc."articleId"
-//       LEFT JOIN "States" s ON asc."stateId" = s.id
-//       LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
-//       LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
-//       LEFT JOIN "NewsApiRequests" nar ON nar.id = a."newsApiRequestId"
-//       ${whereString}
-//       ORDER BY a.id;
-//     `;
-
-//   const results = await sequelize.query(sql, {
-//     replacements,
-//     type: sequelize.QueryTypes.SELECT,
-//   });
-
-//   return results;
-// }
 
 async function sqlQueryArticlesWithStates() {
   const sql = `
@@ -285,9 +242,10 @@ async function sqlQueryArticlesWithStates() {
         a."publishedDate",
         a.url,
         s.id AS "stateId",
-        s.name AS "stateName"
+        s.name AS "stateName",
+        s.abbreviation
       FROM "Articles" a
-      LEFT JOIN "ArticleStateContracts" asc ON a.id = asc."articleId"
+      INNER JOIN "ArticleStateContracts" asc ON a.id = asc."articleId"
       LEFT JOIN "States" s ON asc."stateId" = s.id
       ORDER BY a.id;
     `;
@@ -727,6 +685,28 @@ async function sqlQueryArticlesReport() {
   return flatResults;
 }
 
+async function sqlQueryArticlesIsRelevant() {
+  const sql = `
+    SELECT
+      a.id AS "articleId",
+      a.title,
+      a.description,
+      a."publishedDate",
+      a.url,
+      a.createdAt,
+      ar."isRelevant"
+    FROM "Articles" a
+    INNER JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
+    ORDER BY a.id;
+  `;
+
+  const flatResults = await sequelize.query(sql, {
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  return flatResults;
+}
+
 module.exports = {
   sqlQueryArticles,
   sqlQueryArticlesOld,
@@ -741,4 +721,5 @@ module.exports = {
   sqlQueryArticlesForWithRatingsRoute,
   sqlQueryArticlesWithStates,
   sqlQueryArticlesReport,
+  sqlQueryArticlesIsRelevant,
 };

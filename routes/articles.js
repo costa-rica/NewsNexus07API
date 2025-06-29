@@ -40,7 +40,25 @@ const {
   sqlQueryArticlesWithStates,
   sqlQueryArticlesApproved,
   sqlQueryArticlesReport,
+  sqlQueryArticlesIsRelevant,
 } = require("../modules/queriesSql");
+
+router.post("/test", async (req, res) => {
+  const articlesArrayWithRelevants = await sqlQueryArticlesIsRelevant();
+  const isRelevantByArticleId = new Map();
+  for (const entry of articlesArrayWithRelevants) {
+    if (!isRelevantByArticleId.has(entry.articleId)) {
+      isRelevantByArticleId.set(entry.articleId, []);
+    }
+    isRelevantByArticleId.get(entry.articleId).push({
+      articleId: entry.articleId,
+      isRelevant: entry.isRelevant,
+    });
+  }
+
+  let articlesArrayGrouped = Array.from(isRelevantByArticleId.values());
+  res.json({ articlesArrayGrouped });
+});
 
 // NOTE: ---- > will need ot refactor becuase sqlQueryArticles is changed
 // 🔹 POST /articles: filtered list of articles
@@ -63,6 +81,44 @@ router.post("/", authenticateToken, async (req, res) => {
     articlesArray.length
   );
 
+  // Create Article - State Map for modifing the articlesArray
+  const articlesArrayWithStates = await sqlQueryArticlesWithStates();
+  const statesByArticleId = new Map();
+  for (const entry of articlesArrayWithStates) {
+    if (!statesByArticleId.has(entry.articleId)) {
+      statesByArticleId.set(entry.articleId, []);
+    }
+    statesByArticleId.get(entry.articleId).push({
+      id: entry.stateId,
+      name: entry.stateName,
+      abbreviation: entry.abbreviation,
+    });
+  }
+
+  // Create ARticle - Relevants Map for modifying the articleArray
+  const articlesArrayWithRelevants = await sqlQueryArticlesIsRelevant();
+  const isRelevantByArticleId = new Map();
+  for (const entry of articlesArrayWithRelevants) {
+    if (!isRelevantByArticleId.has(entry.articleId)) {
+      isRelevantByArticleId.set(entry.articleId, []);
+    }
+    isRelevantByArticleId.get(entry.articleId).push({
+      isRelevant: entry.isRelevant,
+    });
+  }
+
+  // Create Article - Approved Map for modifying the articlesArray
+  const articlesArrayWithApproveds = await sqlQueryArticlesApproved();
+  const approvedByUserIdByArticleId = new Map();
+  for (const entry of articlesArrayWithApproveds) {
+    if (!approvedByUserIdByArticleId.has(entry.articleId)) {
+      approvedByUserIdByArticleId.set(entry.articleId, []);
+    }
+    approvedByUserIdByArticleId.get(entry.articleId).push({
+      userId: entry.userId,
+    });
+  }
+
   // Filter in JavaScript based on related tables
   const articlesMap = new Map();
 
@@ -75,8 +131,11 @@ router.post("/", authenticateToken, async (req, res) => {
         publishedDate: row.publishedDate,
         url: row.url,
         States: [],
-        ArticleIsRelevants: [],
-        ArticleApproveds: [],
+        statesStringCommaSeparated: "",
+        ArticleIsRelevant: true,
+        // ArticleApproveds: [],
+        articleIsApproved: false,
+        keyword: "",
         NewsApiRequest: {
           andString: row.andString,
           orString: row.orString,
@@ -87,20 +146,71 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const article = articlesMap.get(row.articleId);
 
-    if (row.stateId && !article.States.some((s) => s.id === row.stateId)) {
-      article.States.push({ id: row.stateId, name: row.stateName });
+    // Check is articlesArrayWithStates contains the row.articleId
+    if (statesByArticleId.has(row.articleId)) {
+      const states = statesByArticleId.get(row.articleId);
+      for (const state of states) {
+        // Only push if not already present
+        if (!article.States.some((s) => s.id === state.id)) {
+          article.States.push(state);
+        }
+        // add comma separated abbreviation
+        if (article.statesStringCommaSeparated === "") {
+          article.statesStringCommaSeparated = state.abbreviation;
+        } else {
+          article.statesStringCommaSeparated =
+            article.statesStringCommaSeparated + ", " + state.abbreviation;
+        }
+      }
     }
 
-    if (row.isRelevant !== null) {
-      article.ArticleIsRelevants.push({ isRelevant: row.isRelevant });
+    // Check if isRelevant
+    if (isRelevantByArticleId.has(row.articleId)) {
+      article.ArticleIsRelevant = false;
     }
 
-    if (row.approvedByUserId) {
-      article.ArticleApproveds.push({ userId: row.approvedByUserId });
+    if (approvedByUserIdByArticleId.has(row.articleId)) {
+      article.articleIsApproved = true;
+    }
+    // if (row.approvedByUserId) {
+    //   article.ArticleApproveds.push({ userId: row.approvedByUserId });
+    // }
+
+    if (article.NewsApiRequest?.andString) {
+      article.keyword =
+        article.keyword + `AND ${article.NewsApiRequest.andString}`;
+    }
+    if (article.NewsApiRequest?.orString) {
+      article.keyword =
+        article.keyword + ` OR ${article.NewsApiRequest.orString}`;
+    }
+    if (article.NewsApiRequest?.notString) {
+      article.keyword =
+        article.keyword + ` NOT ${article.NewsApiRequest.notString}`;
     }
   }
 
   let articlesArrayGrouped = Array.from(articlesMap.values());
+
+  if (returnOnlyIsNotApproved) {
+    articlesArrayGrouped = articlesArrayGrouped.filter((article) => {
+      return !article.articleIsApproved;
+    });
+  }
+
+  if (returnOnlyIsRelevant) {
+    articlesArrayGrouped = articlesArrayGrouped.filter((article) => {
+      return article.ArticleIsRelevant;
+    });
+  }
+
+  // articlesFiltered = articlesArrayGrouped.filter((article) => {
+  //   if (article.id === 42) {
+  //     return true;
+  //   }
+
+  //   return false;
+  // });
 
   res.json({ articlesArray: articlesArrayGrouped });
 });
@@ -337,62 +447,62 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
   });
 });
 
-// 🔹 GET /articles/summary-statistics-obe
-router.get("/summary-statistics-obe", authenticateToken, async (req, res) => {
-  const articlesArray = await sqlQueryArticles({});
-  const articlesArrayWithSummaryStatistics =
-    await sqlQueryArticlesSummaryStatistics();
+// // 🔹 GET /articles/summary-statistics-obe
+// router.get("/summary-statistics-obe", authenticateToken, async (req, res) => {
+//   const articlesArray = await sqlQueryArticles({});
+//   const articlesArrayWithSummaryStatistics =
+//     await sqlQueryArticlesSummaryStatistics();
 
-  let articlesCount = articlesArray.length;
-  let articlesIsRelevantCount = 0;
-  let articlesIsApprovedCount = 0;
-  let hasStateAssigned = 0;
+//   let articlesCount = articlesArray.length;
+//   let articlesIsRelevantCount = 0;
+//   let articlesIsApprovedCount = 0;
+//   let hasStateAssigned = 0;
 
-  let approvedButNotInReport = 0;
-  let articlesSinceLastThursday20hEst = 0;
-  const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
+//   let approvedButNotInReport = 0;
+//   let articlesSinceLastThursday20hEst = 0;
+//   const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
 
-  articlesArrayWithSummaryStatistics.map((article) => {
-    // articlesCount++;
-    if (article.isRelevant !== false) {
-      articlesIsRelevantCount++;
-    }
-    if (article.approvalCreatedAt) {
-      articlesIsApprovedCount++;
-    }
-    if (article.stateId) {
-      hasStateAssigned++;
-    }
+//   articlesArrayWithSummaryStatistics.map((article) => {
+//     // articlesCount++;
+//     if (article.isRelevant !== false) {
+//       articlesIsRelevantCount++;
+//     }
+//     if (article.approvalCreatedAt) {
+//       articlesIsApprovedCount++;
+//     }
+//     if (article.stateId) {
+//       hasStateAssigned++;
+//     }
 
-    const articleCreatedAtDate = new Date(article.createdAt);
-    if (articleCreatedAtDate >= lastThursday20hEst) {
-      articlesSinceLastThursday20hEst++;
-    }
+//     const articleCreatedAtDate = new Date(article.createdAt);
+//     if (articleCreatedAtDate >= lastThursday20hEst) {
+//       articlesSinceLastThursday20hEst++;
+//     }
 
-    if (!article.reportId && article.approvalCreatedAt) {
-      approvedButNotInReport++;
-    }
-  });
+//     if (!article.reportId && article.approvalCreatedAt) {
+//       approvedButNotInReport++;
+//     }
+//   });
 
-  const summaryStatistics = {
-    articlesCount,
-    articlesIsRelevantCount,
-    articlesIsApprovedCount,
-    hasStateAssigned,
-    articlesSinceLastThursday20hEst,
-    approvedButNotInReport,
-  };
-  res.json({ summaryStatistics });
-});
+//   const summaryStatistics = {
+//     articlesCount,
+//     articlesIsRelevantCount,
+//     articlesIsApprovedCount,
+//     hasStateAssigned,
+//     articlesSinceLastThursday20hEst,
+//     approvedButNotInReport,
+//   };
+//   res.json({ summaryStatistics });
+// });
 
-// 🔹 GET /articles/summary-stats-test
-router.get("/summary-stats-test", async (req, res) => {
-  const articlesInReportArray = await sqlQueryArticlesReport();
+// // 🔹 GET /articles/summary-stats-test
+// router.get("/summary-stats-test", async (req, res) => {
+//   const articlesInReportArray = await sqlQueryArticlesReport();
 
-  res.json({
-    articlesInReportArray: articlesInReportArray.splice(0, 120),
-  });
-});
+//   res.json({
+//     articlesInReportArray: articlesInReportArray.splice(0, 120),
+//   });
+// });
 
 // 🔹 POST /add-article
 router.post("/add-article", authenticateToken, async (req, res) => {
