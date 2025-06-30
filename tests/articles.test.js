@@ -110,14 +110,13 @@ describe("POST /articles", () => {
           {
             id: 6,
             name: "Colorado",
+            abbreviation: "CO",
           },
         ],
-        ArticleIsRelevants: [],
-        ArticleApproveds: [
-          {
-            userId: 2,
-          },
-        ],
+        statesStringCommaSeparated: "CO",
+        ArticleIsRelevant: true,
+        articleIsApproved: true,
+        keyword: "AND crash OR bicycle scooter lawnmower skateboard atv",
         NewsApiRequest: {
           andString: "crash",
           orString: "bicycle scooter lawnmower skateboard atv",
