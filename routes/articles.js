@@ -212,7 +212,7 @@ router.post("/", authenticateToken, async (req, res) => {
   //   return false;
   // });
 
-  res.json({ articlesArray: articlesArrayGrouped.splice(0, 120) });
+  res.json({ articlesArray: articlesArrayGrouped });
 });
 
 // 🔹 GET /articles/approved
