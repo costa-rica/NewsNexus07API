@@ -24,8 +24,33 @@ const path = require("path");
 const { Op } = require("sequelize");
 const { DateTime } = require("luxon");
 
-// 🔹 GET /reports: Get all the saved reports
-router.get("/", authenticateToken, async (req, res) => {
+// // 🔹 GET /reports: Get all the saved reports
+// router.get("/", authenticateToken, async (req, res) => {
+//   const reports = await Report.findAll({
+//     include: [
+//       {
+//         model: ArticleReportContract,
+//       },
+//     ],
+//   });
+
+//   const reportsArrayModified = reports.map((report) => {
+//     const rawDate = report?.dateSubmittedToClient;
+//     const isValidDate = rawDate && !isNaN(new Date(rawDate).getTime());
+
+//     return {
+//       ...report.dataValues,
+//       dateSubmittedToClient: isValidDate ? rawDate : "N/A",
+//     };
+//   });
+
+//   res.json({ reportsArray: reportsArrayModified });
+// });
+
+// 🔹 GET /reports/table
+router.get("/table", authenticateToken, async (req, res) => {
+  console.log(`- in GET /reports/table`);
+
   const reports = await Report.findAll({
     include: [
       {
@@ -44,7 +69,73 @@ router.get("/", authenticateToken, async (req, res) => {
     };
   });
 
-  res.json({ reportsArray: reportsArrayModified });
+  // Not quite right
+  const reportsArrayByCrName = reportsArrayModified.reduce((acc, report) => {
+    const crName = report.nameCrFormat;
+    if (!acc[crName]) {
+      acc[crName] = [];
+    }
+    acc[crName].push(report);
+    return acc;
+  }, {});
+
+  res.json({ reportsArray: reportsArrayByCrName });
+});
+
+// 🔹 GET /reports - Return reports grouped by crName with full report and ARC data
+router.get("/", authenticateToken, async (req, res) => {
+  console.log(`- in GET /reports`);
+
+  try {
+    const allReports = await Report.findAll({
+      include: [
+        {
+          model: ArticleReportContract,
+        },
+      ],
+      order: [["createdAt", "ASC"]],
+    });
+
+    // Step 1: Map reports and normalize date
+    const reportsWithFormattedDate = allReports.map((report) => {
+      const rawDate = report.dateSubmittedToClient;
+      const isValidDate = rawDate && !isNaN(new Date(rawDate).getTime());
+      const formattedDate = isValidDate ? rawDate : "N/A";
+
+      return {
+        ...report.toJSON(),
+        dateSubmittedToClient: formattedDate,
+      };
+    });
+
+    // Step 2: Group by nameCrFormat
+    const groupedByCrName = {};
+
+    for (const report of reportsWithFormattedDate) {
+      const crName = report.nameCrFormat;
+      if (!groupedByCrName[crName]) {
+        groupedByCrName[crName] = [];
+      }
+      groupedByCrName[crName].push(report);
+    }
+
+    // Step 3: Convert to desired array structure
+    const reportsArrayByCrName = Object.entries(groupedByCrName).map(
+      ([crName, reportsArray]) => ({
+        crName,
+        reportsArray,
+      })
+    );
+
+    res.json({ reportsArrayByCrName });
+  } catch (error) {
+    console.error("Error generating new reports list:", error);
+    res.status(500).json({
+      result: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
 });
 
 // 🔹 POST /reports/create: Create a new report
