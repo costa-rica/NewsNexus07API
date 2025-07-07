@@ -503,12 +503,15 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
       .json({ result: false, message: "Report not found." });
   }
 
-  const reportOriginalSubmittedDate =
-    reportOriginal.dateSubmittedToClient.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "numeric", // no leading zero
-      day: "numeric", // no leading zero
-    });
+  let reportOriginalSubmittedDate;
+  if (reportOriginal.dateSubmittedToClient) {
+    reportOriginalSubmittedDate =
+      reportOriginal.dateSubmittedToClient.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "numeric", // no leading zero
+        day: "numeric", // no leading zero
+      });
+  }
   // get report Cr name
   const reportCrName = reportOriginal.nameCrFormat;
   // create a new report with the same cr name but different bunddle name
@@ -517,13 +520,6 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
     userId: user.id,
   });
   const zipFilename = `report_bundle_${reportNew.id}.zip`;
-  // reportNew.nameZipFile = zipFilename;
-  // await reportNew.save();
-  // const nowET = convertJavaScriptDateToTimezoneString(
-  //   new Date(),
-  //   "America/New_York"
-  // ).dateString; // YYYY-MM-DD
-  // const datePrefixET = nowET.replace(/[-:]/g, "").slice(2, 8);
 
   // get list of Aritcle IDs from the articleReportContract table
   const articleReportContractsArray = await ArticleReportContract.findAll({
@@ -531,10 +527,6 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
       reportId: reportOriginal.id,
     },
   });
-
-  // console.log(
-  //   `articleReportContractsArray.length: ${articleReportContractsArray.length}`
-  // );
 
   // get array of articles from the ArticleApproved Table
   const approvedArticlesArray = await ArticleApproved.findAll({
@@ -569,26 +561,9 @@ router.get("/recreate/:reportId", authenticateToken, async (req, res) => {
         articleId: approvedArticleObj.articleId,
       },
     });
-    // console.log(JSON.stringify(articleStateContractsArray, null, 2));
     const stateId = articleStateContractsArray[0].stateId;
     const stateObj = await State.findByPk(stateId);
     state = stateObj.abbreviation;
-    // if (article.States?.length > 0) {
-    //   state = article.States[0].abbreviation;
-    // }
-
-    // console.log(
-    //   `article ref date: ${
-    //     approvedArticleObj.refNumber
-    //   } submitted date: ${reportOriginal.dateSubmittedToClient.toLocaleDateString(
-    //     "en-US",
-    //     {
-    //       year: "numeric",
-    //       month: "numeric", // no leading zero
-    //       day: "numeric", // no leading zero
-    //     }
-    //   )} headline: ${approvedArticleObj.headlineForPdfReport}`
-    // );
 
     try {
       approvedArticlesObjArrayModified.push({
