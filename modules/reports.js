@@ -36,6 +36,7 @@ async function createXlsxForReport(dataArray, excelFilename = false) {
         header: "Submitted",
         key: "submitted",
         width: 15,
+        // style: { numFmt: "mm/dd/yyyy" }, // <-- Ensures Excel displays only date
       },
       { header: "Headline", key: "headline", width: 40 },
       { header: "Publication", key: "publication", width: 30 },

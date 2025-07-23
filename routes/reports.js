@@ -24,29 +24,6 @@ const path = require("path");
 const { Op } = require("sequelize");
 const { DateTime } = require("luxon");
 
-// // 🔹 GET /reports: Get all the saved reports
-// router.get("/", authenticateToken, async (req, res) => {
-//   const reports = await Report.findAll({
-//     include: [
-//       {
-//         model: ArticleReportContract,
-//       },
-//     ],
-//   });
-
-//   const reportsArrayModified = reports.map((report) => {
-//     const rawDate = report?.dateSubmittedToClient;
-//     const isValidDate = rawDate && !isNaN(new Date(rawDate).getTime());
-
-//     return {
-//       ...report.dataValues,
-//       dateSubmittedToClient: isValidDate ? rawDate : "N/A",
-//     };
-//   });
-
-//   res.json({ reportsArray: reportsArrayModified });
-// });
-
 // 🔹 GET /reports/table
 router.get("/table", authenticateToken, async (req, res) => {
   console.log(`- in GET /reports/table`);
@@ -202,18 +179,27 @@ router.post("/create", authenticateToken, async (req, res) => {
       state = article.States[0].abbreviation;
     }
 
-    // if (i === 0) {
-    //   console.log(
-    //     `--->  article.ArticleApproveds[0]: ${typeof article.ArticleApproveds[0]
-    //       .publicationDateForPdfReport} ${
-    //       article.ArticleApproveds[0].publicationDateForPdfReport
-    //     }`
-    //   );
-    // }
     try {
+      const dateParts = convertJavaScriptDateToTimezoneString(
+        new Date(),
+        "America/New_York"
+      );
+
+      console.log("----- Verify dateParts are New York Time -----");
+      console.log(dateParts);
+      console.log("----- ------ ----");
+
+      // Build string "MM/DD/YYYY"
+      // const submittedDateString = `${dateParts.month}/${dateParts.day}/${dateParts.year}`;
+      const submittedDate = new Date(
+        `${dateParts.year}-${dateParts.month}-${dateParts.day}T00:00:00.000Z`
+      );
+
       approvedArticlesObjArrayModified.push({
         refNumber: article.refNumber,
-        submitted: createJavaScriptExcelDateObjectEastCoasUs(),
+        // submitted: createJavaScriptExcelDateObjectEastCoasUs(),
+        submitted: submittedDate,
+
         headline: article.ArticleApproveds[0].headlineForPdfReport,
         publication: article.ArticleApproveds[0].publicationNameForPdfReport,
         datePublished: new Date(
