@@ -587,60 +587,99 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     });
     zeroShotScorerEntityId = zeroShotScorerEntityObj.id;
   }
-  try {
-    // 🔹 Step 1: Get full list of articles as base array
-    const whereClause = {};
-    if (returnOnlyThisPublishedDateOrAfter) {
-      whereClause.publishedDate = {
-        [require("sequelize").Op.gte]: new Date(
-          returnOnlyThisPublishedDateOrAfter
-        ),
-      };
+  // try {
+  // 🔹 Step 1: Get full list of articles as base array
+  const whereClause = {};
+  if (returnOnlyThisPublishedDateOrAfter) {
+    whereClause.publishedDate = {
+      [require("sequelize").Op.gte]: new Date(
+        returnOnlyThisPublishedDateOrAfter
+      ),
+    };
+  }
+
+  if (returnOnlyThisCreatedAtDateOrAfter) {
+    whereClause.createdAt = {
+      [require("sequelize").Op.gte]: new Date(
+        returnOnlyThisCreatedAtDateOrAfter
+      ),
+    };
+  }
+  // const articlesArray = await sqlQueryArticlesForWithRatingsRoute(
+  //   returnOnlyThisCreatedAtDateOrAfter,
+  //   returnOnlyThisPublishedDateOrAfter
+  // );
+  const articlesArray = await sqlQueryArticlesForWithRatingsRouteNoAi(
+    returnOnlyThisCreatedAtDateOrAfter,
+    returnOnlyThisPublishedDateOrAfter
+  );
+
+  // Step 2: Filter articles
+  // Filter in JavaScript based on related tables
+  const articlesArrayFilteredNoAi = articlesArray.filter((article) => {
+    // Filter out not approved if requested
+    if (
+      returnOnlyIsNotApproved &&
+      article.ArticleApproveds &&
+      article.ArticleApproveds.length > 0
+    ) {
+      return false;
     }
 
-    if (returnOnlyThisCreatedAtDateOrAfter) {
-      whereClause.createdAt = {
-        [require("sequelize").Op.gte]: new Date(
-          returnOnlyThisCreatedAtDateOrAfter
-        ),
+    // Filter out not relevant if requested
+    if (
+      returnOnlyIsRelevant &&
+      article.ArticleIsRelevants &&
+      article.ArticleIsRelevants.some((entry) => entry.isRelevant !== null)
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  // Step 2.1: Get AI scores
+  const artificialIntelligenceObject = await ArtificialIntelligence.findOne({
+    where: { name: semanticScorerEntityName },
+    include: [EntityWhoCategorizedArticle],
+  });
+  // if (!artificialIntelligenceObject) {
+  //   return res.status(404).json({ message: "AI not found." });
+  // }
+  const entityWhoCategorizedArticleId =
+    artificialIntelligenceObject.EntityWhoCategorizedArticles[0].id;
+
+  if (!artificialIntelligenceObject.EntityWhoCategorizedArticles?.length) {
+    return res
+      .status(500)
+      .json({ message: "No related EntityWhoCategorizedArticles found" });
+  }
+
+  const articlesAndAiScores = await sqlQueryArticlesAndAiScores(
+    articlesArrayFilteredNoAi.map((article) => article.id),
+    entityWhoCategorizedArticleId
+  );
+  const articlesArrayFilteredWithSemanticScorer = articlesArrayFilteredNoAi.map(
+    (article) => {
+      const aiScore = articlesAndAiScores.find(
+        (score) => score.articleId === article.id
+      );
+      return {
+        ...article,
+        semanticRatingMax: aiScore?.keywordRating,
+        semanticRatingMaxLabel: aiScore?.keyword,
       };
     }
-    const articlesArray = await sqlQueryArticlesForWithRatingsRoute(
-      returnOnlyThisCreatedAtDateOrAfter,
-      returnOnlyThisPublishedDateOrAfter
-    );
+  );
 
-    // Step 2: Filter articles
-    // Filter in JavaScript based on related tables
-    const articlesArrayFiltered = articlesArray.filter((article) => {
-      // Filter out not approved if requested
-      if (
-        returnOnlyIsNotApproved &&
-        article.ArticleApproveds &&
-        article.ArticleApproveds.length > 0
-      ) {
-        return false;
-      }
+  // console.log(
+  //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
+  // );
+  let counter = 0;
 
-      // Filter out not relevant if requested
-      if (
-        returnOnlyIsRelevant &&
-        article.ArticleIsRelevants &&
-        article.ArticleIsRelevants.some((entry) => entry.isRelevant !== null)
-      ) {
-        return false;
-      }
-      return true;
-    });
-
-    // console.log(
-    //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
-    // );
-    let counter = 0;
-
-    // 🔹 Step 3: Build final article objects
-    // const finalArticles = articlesArray.map((article) => {
-    const finalArticles = articlesArrayFiltered.map((article) => {
+  // // 🔹 Step 3: Build final article objects
+  // // const finalArticles = articlesArray.map((article) => {
+  const finalArticles = articlesArrayFilteredWithSemanticScorer.map(
+    (article) => {
       const statesStringCommaSeparated = article.States.map(
         (state) => state.name
       ).join(", ");
@@ -671,26 +710,8 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
           article.NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg;
       }
 
-      let semanticRatingMaxLabel = "N/A";
-      let semanticRatingMax = "N/A";
-      let zeroShotRatingMaxLabel = "N/A";
-      let zeroShotRatingMax = "N/A";
-
-      if (article.ArticleEntityWhoCategorizedArticleContracts?.length > 0) {
-        article.ArticleEntityWhoCategorizedArticleContracts.forEach(
-          (contract) => {
-            if (contract.entityWhoCategorizesId === semanticScorerEntityId) {
-              semanticRatingMaxLabel = contract.keyword;
-              semanticRatingMax = contract.keywordRating;
-            }
-            if (zeroShotScorerEntityId) {
-              if (contract.entityWhoCategorizesId === zeroShotScorerEntityId) {
-                zeroShotRatingMaxLabel = contract.keyword;
-                zeroShotRatingMax = contract.keywordRating;
-              }
-            }
-          }
-        );
+      if (article.id === 42) {
+        console.log(JSON.stringify(article, null, 2));
       }
 
       const isBeingReviewed = article.ArticleRevieweds?.length > 0;
@@ -708,28 +729,32 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
         isApproved,
         requestQueryString,
         nameOfOrg,
-        semanticRatingMaxLabel,
-        semanticRatingMax,
-        zeroShotRatingMaxLabel,
-        zeroShotRatingMax,
+        semanticRatingMaxLabel: article.semanticRatingMaxLabel,
+        semanticRatingMax: article.semanticRatingMax,
+        // zeroShotRatingMaxLabel,
+        // zeroShotRatingMax,
         isBeingReviewed,
       };
-    });
-    // console.log("counter: ", counter);
-    const timeToRenderResponseFromApiInSeconds =
-      (Date.now() - startTime) / 1000;
-    console.log(
-      `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
-    );
-    res.json({
-      articleCount: finalArticles.length,
-      articlesArray: finalArticles,
-      timeToRenderResponseFromApiInSeconds,
-    });
-  } catch (error) {
-    console.error("❌ Error in /articles/with-ratings:", error);
-    res.status(500).json({ error: "Failed to fetch articles with ratings." });
-  }
+    }
+  );
+  console.log("----------------------");
+  console.log("---- Route finished ----");
+  console.log("----------------------");
+  // // console.log("counter: ", counter);
+  const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
+  console.log(
+    `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
+  );
+  res.json({
+    articleCount: finalArticles.length,
+    articlesArray: finalArticles,
+    // articlesArray: articlesArrayFilteredWithSemanticScorer,
+    timeToRenderResponseFromApiInSeconds,
+  });
+  // } catch (error) {
+  //   console.error("❌ Error in /articles/with-ratings:", error);
+  //   res.status(500).json({ error: "Failed to fetch articles with ratings." });
+  // }
 });
 
 // 🔹 POST /articles/table-approved-by-request
@@ -800,10 +825,15 @@ router.get("/test-sql", authenticateToken, async (req, res) => {
   const articlesArray = await sqlQueryArticlesForWithRatingsRouteNoAi();
   const articleIdArray = articlesArray.map((article) => article.id);
 
+  // AI 01 : NewsNexusSemanticScorer02
+  // AI 02 : NewsNexusClassifierLocationScorer01
   const artificialIntelligenceObject = await ArtificialIntelligence.findOne({
-    where: { name: "NewsNexusClassifierLocationScorer01" },
+    where: { name: "NewsNexusSemanticScorer02" },
     include: [EntityWhoCategorizedArticle],
   });
+  if (!artificialIntelligenceObject) {
+    return res.status(404).json({ error: "AI not found." });
+  }
   const entityWhoCategorizedArticleId =
     artificialIntelligenceObject.EntityWhoCategorizedArticles[0].id;
 
@@ -811,8 +841,19 @@ router.get("/test-sql", authenticateToken, async (req, res) => {
     articleIdArray,
     entityWhoCategorizedArticleId
   );
+  const articlesArrayModified = articlesArray.map((article) => {
+    const aiScore = articlesAndAiScores.find(
+      (score) => score.articleId === article.id
+    );
+    return {
+      ...article,
+      // aiScore,
+      semanticRatingMax: aiScore?.keywordRating,
+      semanticRatingMaxLabel: aiScore?.keyword,
+    };
+  });
 
-  res.json({ articlesAndAiScores });
+  res.json({ articlesArrayModified });
 });
 
 module.exports = router;

@@ -12,7 +12,7 @@ describe("POST /articles/with-ratings", () => {
       const response = await request(app)
         .post("/articles/with-ratings")
         .set("Authorization", `Bearer ${process.env.TEST_TOKEN}`)
-        .send({});
+        .send({ semanticScorerEntityName: "NewsNexusSemanticScorer02" });
 
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty("articlesArray");
@@ -28,7 +28,8 @@ it(
     const response = await request(app)
       .post("/articles/with-ratings")
       .set("Authorization", `Bearer ${process.env.TEST_TOKEN}`)
-      .send({});
+      // .send({});
+      .send({ semanticScorerEntityName: "NewsNexusSemanticScorer02" });
 
     expect(response.statusCode).toBe(200);
     expect(Array.isArray(response.body.articlesArray)).toBe(true);
@@ -48,10 +49,10 @@ it(
       requestQueryString:
         "AND crash OR bicycle scooter lawnmower skateboard atv",
       nameOfOrg: "NewsAPI",
-      semanticRatingMaxLabel: "N/A",
-      semanticRatingMax: "N/A",
-      zeroShotRatingMaxLabel: "N/A",
-      zeroShotRatingMax: "N/A",
+      semanticRatingMaxLabel: "home safety hazards",
+      semanticRatingMax: 0.098861377,
+      // zeroShotRatingMaxLabel: "N/A",
+      // zeroShotRatingMax: "N/A",
       isBeingReviewed: false,
     };
 
@@ -72,9 +73,9 @@ it(
         article.semanticRatingMaxLabel ===
           expectedArticle.semanticRatingMaxLabel &&
         article.semanticRatingMax === expectedArticle.semanticRatingMax &&
-        article.zeroShotRatingMaxLabel ===
-          expectedArticle.zeroShotRatingMaxLabel &&
-        article.zeroShotRatingMax === expectedArticle.zeroShotRatingMax &&
+        // article.zeroShotRatingMaxLabel ===
+        //   expectedArticle.zeroShotRatingMaxLabel &&
+        // article.zeroShotRatingMax === expectedArticle.zeroShotRatingMax &&
         article.isBeingReviewed === expectedArticle.isBeingReviewed
       );
     });
