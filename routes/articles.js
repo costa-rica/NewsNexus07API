@@ -15,6 +15,7 @@ const {
   ArticleReviewed,
   Report,
   NewsArticleAggregatorSource,
+  EntityWhoCategorizedArticle,
 } = require("newsnexus07db");
 const { authenticateToken } = require("../modules/userAuthentication");
 const {
@@ -41,24 +42,26 @@ const {
   sqlQueryArticlesApproved,
   sqlQueryArticlesReport,
   sqlQueryArticlesIsRelevant,
+  sqlQueryArticlesForWithRatingsRouteNoAi,
+  sqlQueryArticlesAndAiScores,
 } = require("../modules/queriesSql");
 
-router.post("/test", async (req, res) => {
-  const articlesArrayWithRelevants = await sqlQueryArticlesIsRelevant();
-  const isRelevantByArticleId = new Map();
-  for (const entry of articlesArrayWithRelevants) {
-    if (!isRelevantByArticleId.has(entry.articleId)) {
-      isRelevantByArticleId.set(entry.articleId, []);
-    }
-    isRelevantByArticleId.get(entry.articleId).push({
-      articleId: entry.articleId,
-      isRelevant: entry.isRelevant,
-    });
-  }
+// router.post("/test", async (req, res) => {
+//   const articlesArrayWithRelevants = await sqlQueryArticlesIsRelevant();
+//   const isRelevantByArticleId = new Map();
+//   for (const entry of articlesArrayWithRelevants) {
+//     if (!isRelevantByArticleId.has(entry.articleId)) {
+//       isRelevantByArticleId.set(entry.articleId, []);
+//     }
+//     isRelevantByArticleId.get(entry.articleId).push({
+//       articleId: entry.articleId,
+//       isRelevant: entry.isRelevant,
+//     });
+//   }
 
-  let articlesArrayGrouped = Array.from(isRelevantByArticleId.values());
-  res.json({ articlesArrayGrouped });
-});
+//   let articlesArrayGrouped = Array.from(isRelevantByArticleId.values());
+//   res.json({ articlesArrayGrouped });
+// });
 
 // NOTE: ---- > will need to refactor because sqlQueryArticles is changed
 // 🔹 POST /articles: filtered list of articles
@@ -204,14 +207,6 @@ router.post("/", authenticateToken, async (req, res) => {
     });
   }
 
-  // articlesFiltered = articlesArrayGrouped.filter((article) => {
-  //   if (article.id === 42) {
-  //     return true;
-  //   }
-
-  //   return false;
-  // });
-
   res.json({ articlesArray: articlesArrayGrouped });
 });
 
@@ -355,11 +350,11 @@ router.post("/approve/:articleId", authenticateToken, async (req, res) => {
   const {
     isApproved,
     headlineForPdfReport,
-    publicationNameForPdfReport,
-    publicationDateForPdfReport,
-    textForPdfReport,
-    urlForPdfReport,
-    kmNotes,
+    // publicationNameForPdfReport,
+    // publicationDateForPdfReport,
+    // textForPdfReport,
+    // urlForPdfReport,
+    // kmNotes,
   } = req.body;
   const user = req.user;
 
@@ -415,12 +410,6 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
 
   const articlesInReportArray = await sqlQueryArticlesReport();
 
-  // articlesInReportArray.map((article) => {
-  //   if (article.articleId === 27369) {
-  //     console.log(article);
-  //   }
-  // });
-
   // Get all articleIds from articles in report
   const articleIdsInReport = [];
   articlesInReportArray.map((article) => {
@@ -446,63 +435,6 @@ router.get("/summary-statistics", authenticateToken, async (req, res) => {
     },
   });
 });
-
-// // 🔹 GET /articles/summary-statistics-obe
-// router.get("/summary-statistics-obe", authenticateToken, async (req, res) => {
-//   const articlesArray = await sqlQueryArticles({});
-//   const articlesArrayWithSummaryStatistics =
-//     await sqlQueryArticlesSummaryStatistics();
-
-//   let articlesCount = articlesArray.length;
-//   let articlesIsRelevantCount = 0;
-//   let articlesIsApprovedCount = 0;
-//   let hasStateAssigned = 0;
-
-//   let approvedButNotInReport = 0;
-//   let articlesSinceLastThursday20hEst = 0;
-//   const lastThursday20hEst = getLastThursdayAt20hInNyTimeZone();
-
-//   articlesArrayWithSummaryStatistics.map((article) => {
-//     // articlesCount++;
-//     if (article.isRelevant !== false) {
-//       articlesIsRelevantCount++;
-//     }
-//     if (article.approvalCreatedAt) {
-//       articlesIsApprovedCount++;
-//     }
-//     if (article.stateId) {
-//       hasStateAssigned++;
-//     }
-
-//     const articleCreatedAtDate = new Date(article.createdAt);
-//     if (articleCreatedAtDate >= lastThursday20hEst) {
-//       articlesSinceLastThursday20hEst++;
-//     }
-
-//     if (!article.reportId && article.approvalCreatedAt) {
-//       approvedButNotInReport++;
-//     }
-//   });
-
-//   const summaryStatistics = {
-//     articlesCount,
-//     articlesIsRelevantCount,
-//     articlesIsApprovedCount,
-//     hasStateAssigned,
-//     articlesSinceLastThursday20hEst,
-//     approvedButNotInReport,
-//   };
-//   res.json({ summaryStatistics });
-// });
-
-// // 🔹 GET /articles/summary-stats-test
-// router.get("/summary-stats-test", async (req, res) => {
-//   const articlesInReportArray = await sqlQueryArticlesReport();
-
-//   res.json({
-//     articlesInReportArray: articlesInReportArray.splice(0, 120),
-//   });
-// });
 
 // 🔹 POST /add-article
 router.post("/add-article", authenticateToken, async (req, res) => {
@@ -863,58 +795,24 @@ router.post(
   }
 );
 
-// // 🔹 GET /articles/download/table-approved-by-request - Download Report
-// router.get(
-//   "/download/table-approved-by-request",
-//   authenticateToken,
-//   async (req, res) => {
-//     console.log(`- in GET /articles/download/table-approved-by-request`);
+// GET /articles/test
+router.get("/test-sql", authenticateToken, async (req, res) => {
+  const articlesArray = await sqlQueryArticlesForWithRatingsRouteNoAi();
+  const articleIdArray = articlesArray.map((article) => article.id);
 
-//     try {
-//       const filename = `approved_by_request_${
-//         new Date().toISOString().split("T")[0]
-//       }.xlsx`;
-//       const filePathAndName = path.join(
-//         process.env.PATH_TO_UTILITIES_ANALYSIS_SPREADSHEETS,
-//         filename
-//       );
+  const artificialIntelligenceObject = await ArtificialIntelligence.findOne({
+    where: { name: "NewsNexusClassifierLocationScorer01" },
+    include: [EntityWhoCategorizedArticle],
+  });
+  const entityWhoCategorizedArticleId =
+    artificialIntelligenceObject.EntityWhoCategorizedArticles[0].id;
 
-//       // Check if file exists
-//       if (!fs.existsSync(filePathAndName)) {
-//         return res
-//           .status(404)
-//           .json({ result: false, message: "File not found." });
-//       } else {
-//         console.log(`----> File exists: ${filePathAndName}`);
-//       }
+  const articlesAndAiScores = await sqlQueryArticlesAndAiScores(
+    articleIdArray,
+    entityWhoCategorizedArticleId
+  );
 
-//       res.setHeader(
-//         "Content-Type",
-//         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-//       );
-//       res.setHeader(
-//         "Content-Disposition",
-//         `attachment; filename="${filename}"`
-//       );
-
-//       // Let Express handle download
-//       res.download(filePathAndName, filename, (err) => {
-//         if (err) {
-//           console.error("Download error:", err);
-//           res
-//             .status(500)
-//             .json({ result: false, message: "File download failed." });
-//         }
-//       });
-//     } catch (error) {
-//       console.error("Error processing request:", error);
-//       res.status(500).json({
-//         result: false,
-//         message: "Internal server error",
-//         error: error.message,
-//       });
-//     }
-//   }
-// );
+  res.json({ articlesAndAiScores });
+});
 
 module.exports = router;
