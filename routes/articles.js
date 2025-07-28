@@ -605,10 +605,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       ),
     };
   }
-  // const articlesArray = await sqlQueryArticlesForWithRatingsRoute(
-  //   returnOnlyThisCreatedAtDateOrAfter,
-  //   returnOnlyThisPublishedDateOrAfter
-  // );
+
   const articlesArray = await sqlQueryArticlesForWithRatingsRoute(
     returnOnlyThisCreatedAtDateOrAfter,
     returnOnlyThisPublishedDateOrAfter
@@ -638,25 +635,29 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
   });
 
   // Step 2.1: Get AI scores
-  const artificialIntelligenceObject = await ArtificialIntelligence.findOne({
+  const artificialIntelligenceObject01 = await ArtificialIntelligence.findOne({
     where: { name: semanticScorerEntityName },
     include: [EntityWhoCategorizedArticle],
   });
-  if (!artificialIntelligenceObject) {
+  if (!artificialIntelligenceObject01) {
     return res.status(404).json({ message: "AI not found." });
   }
-  const entityWhoCategorizedArticleId =
-    artificialIntelligenceObject.EntityWhoCategorizedArticles[0].id;
+  const entityWhoCategorizedArticleId01 =
+    artificialIntelligenceObject01.EntityWhoCategorizedArticles[0].id;
 
-  if (!artificialIntelligenceObject.EntityWhoCategorizedArticles?.length) {
+  if (!artificialIntelligenceObject01.EntityWhoCategorizedArticles?.length) {
     return res
       .status(500)
       .json({ message: "No related EntityWhoCategorizedArticles found" });
   }
 
+  const articlesIdArray = articlesArrayFilteredNoAi.map(
+    (article) => article.id
+  );
+
   const articlesAndAiScores = await sqlQueryArticlesAndAiScores(
-    articlesArrayFilteredNoAi.map((article) => article.id),
-    entityWhoCategorizedArticleId
+    articlesIdArray,
+    entityWhoCategorizedArticleId01
   );
   const articlesArrayFilteredWithSemanticScorer = articlesArrayFilteredNoAi.map(
     (article) => {
@@ -671,72 +672,85 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     }
   );
 
-  // console.log(
-  //   articlesArrayFiltered[0].NewsApiRequest.newsArticleAggregatorSourceId
-  // );
-  let counter = 0;
+  // Step 2.2: Get zero shot Location Classifier scores
 
-  // // 🔹 Step 3: Build final article objects
-  // // const finalArticles = articlesArray.map((article) => {
-  const finalArticles = articlesArrayFilteredWithSemanticScorer.map(
-    (article) => {
-      const statesStringCommaSeparated = article.States.map(
-        (state) => state.name
-      ).join(", ");
+  const artificialIntelligenceObject02 = await ArtificialIntelligence.findOne({
+    where: { name: "NewsNexusClassifierLocationScorer01" },
+    include: [EntityWhoCategorizedArticle],
+  });
+  if (!artificialIntelligenceObject02) {
+    return res.status(404).json({ message: "AI not found." });
+  }
+  const entityWhoCategorizedArticleId02 =
+    artificialIntelligenceObject02.EntityWhoCategorizedArticles[0].id;
 
-      let isRelevant = true;
-      if (article.ArticleIsRelevants.every((entry) => entry.isRelevant === 0)) {
-        isRelevant = false;
-      }
-      // const isRelevant = article.ArticleIsRelevants.every(
-      //   (entry) => entry.isRelevant !== null
-      // );
-      const isApproved =
-        article.ArticleApproveds &&
-        article.ArticleApproveds.some((entry) => entry.userId !== null);
+  const articlesAndLocationClassifierScoresArray =
+    await sqlQueryArticlesAndAiScores(
+      articlesIdArray,
+      entityWhoCategorizedArticleId02
+    );
 
-      // let keyword = "";
-      let requestQueryString = "";
-      if (article.NewsApiRequest?.andString)
-        requestQueryString += `AND ${article.NewsApiRequest.andString}`;
-      if (article.NewsApiRequest?.orString)
-        requestQueryString += ` OR ${article.NewsApiRequest.orString}`;
-      if (article.NewsApiRequest?.notString)
-        requestQueryString += ` NOT ${article.NewsApiRequest.notString}`;
-
-      let nameOfOrg = "";
-      if (article.NewsApiRequest?.NewsArticleAggregatorSource?.nameOfOrg) {
-        nameOfOrg =
-          article.NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg;
-      }
-
-      // if (article.id === 42) {
-      //   console.log(JSON.stringify(article, null, 2));
-      // }
-
-      const isBeingReviewed = article.ArticleRevieweds?.length > 0;
-
+  const articlesArrayWithBothAiScores =
+    articlesArrayFilteredWithSemanticScorer.map((article) => {
+      const locationClassifierScore =
+        articlesAndLocationClassifierScoresArray.find(
+          (score) => score.articleId === article.id
+        );
       return {
-        id: article.id,
-        title: article.title,
-        description: article.description,
-        publishedDate: article.publishedDate,
-        publicationName: article.publicationName,
-        url: article.url,
-        States: article.States,
-        statesStringCommaSeparated,
-        isRelevant,
-        isApproved,
-        requestQueryString,
-        nameOfOrg,
-        semanticRatingMaxLabel: article.semanticRatingMaxLabel,
-        semanticRatingMax: article.semanticRatingMax,
-        // zeroShotRatingMaxLabel,
-        // zeroShotRatingMax,
-        isBeingReviewed,
+        ...article,
+        locationClassifierScore: locationClassifierScore?.keywordRating,
+        locationClassifierScoreLabel: locationClassifierScore?.keyword,
       };
+    });
+
+  // 🔹 Step 3: Build final article objects
+  const finalArticles = articlesArrayWithBothAiScores.map((article) => {
+    const statesStringCommaSeparated = article.States.map(
+      (state) => state.name
+    ).join(", ");
+
+    let isRelevant = true;
+    if (article.ArticleIsRelevants.every((entry) => entry.isRelevant === 0)) {
+      isRelevant = false;
     }
-  );
+    const isApproved =
+      article.ArticleApproveds &&
+      article.ArticleApproveds.some((entry) => entry.userId !== null);
+
+    let requestQueryString = "";
+    if (article.NewsApiRequest?.andString)
+      requestQueryString += `AND ${article.NewsApiRequest.andString}`;
+    if (article.NewsApiRequest?.orString)
+      requestQueryString += ` OR ${article.NewsApiRequest.orString}`;
+    if (article.NewsApiRequest?.notString)
+      requestQueryString += ` NOT ${article.NewsApiRequest.notString}`;
+
+    let nameOfOrg = "";
+    if (article.NewsApiRequest?.NewsArticleAggregatorSource?.nameOfOrg) {
+      nameOfOrg = article.NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg;
+    }
+    const isBeingReviewed = article.ArticleRevieweds?.length > 0;
+
+    return {
+      id: article.id,
+      title: article.title,
+      description: article.description,
+      publishedDate: article.publishedDate,
+      publicationName: article.publicationName,
+      url: article.url,
+      States: article.States,
+      statesStringCommaSeparated,
+      isRelevant,
+      isApproved,
+      requestQueryString,
+      nameOfOrg,
+      semanticRatingMaxLabel: article.semanticRatingMaxLabel,
+      semanticRatingMax: article.semanticRatingMax,
+      locationClassifierScoreLabel: article.locationClassifierScoreLabel,
+      locationClassifierScore: article.locationClassifierScore,
+      isBeingReviewed,
+    };
+  });
 
   const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
   console.log(
