@@ -405,6 +405,219 @@ async function sqlQueryArticlesWithStatesApprovedReportContract() {
   return Array.from(articlesMap.values());
 }
 
+// async function sqlQueryArticlesForWithRatingsRoute(
+//   returnOnlyThisCreatedAtDateOrAfter,
+//   returnOnlyThisPublishedDateOrAfter
+// ) {
+//   const replacements = {};
+//   const whereClauses = [];
+
+//   if (returnOnlyThisCreatedAtDateOrAfter) {
+//     whereClauses.push(`a."createdAt" >= :returnOnlyThisCreatedAtDateOrAfter`);
+//     replacements.returnOnlyThisCreatedAtDateOrAfter =
+//       returnOnlyThisCreatedAtDateOrAfter;
+//   }
+
+//   if (returnOnlyThisPublishedDateOrAfter) {
+//     whereClauses.push(
+//       `a."publishedDate" >= :returnOnlyThisPublishedDateOrAfter`
+//     );
+//     replacements.returnOnlyThisPublishedDateOrAfter =
+//       returnOnlyThisPublishedDateOrAfter;
+//   }
+
+//   const whereClause =
+//     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+//   const sql = `
+//     SELECT
+//       a.id,
+//       a."createdAt",
+//       a."newsApiRequestId",
+//       a."title",
+//       a."description",
+//       a."publishedDate",
+//       a."publicationName",
+//       a."url",
+
+//       -- NewsApiRequest fields
+//       nar."andString" AS "NewsApiRequest.andString",
+//       nar."orString" AS "NewsApiRequest.orString",
+//       nar."notString" AS "NewsApiRequest.notString",
+//       nar.id AS "NewsApiRequest.id",
+//       nar."createdAt" AS "NewsApiRequest.createdAt",
+
+//       -- NewsArticleAggregatorSource fields
+//       nas.id AS "NewsApiRequest.NewsArticleAggregatorSource.id",
+//       nas."nameOfOrg" AS "NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg",
+
+//       -- Review / Approval / Relevance
+//       ar."isRelevant",
+//       ar."userId" AS "ArticleIsRelevant.userId",
+//       ar."articleId" AS "ArticleIsRelevant.articleId",
+//       ar."isRelevant" AS "ArticleIsRelevant.isRelevant",
+//       aa.id AS "ArticleApproved.id",
+//       aa."userId" AS "ArticleApproved.userId",
+//       aa."articleId" AS "ArticleApproved.articleId",
+//       aa."isApproved" AS "ArticleApproved.isApproved",
+//       s.id AS "stateId",
+//       s.id AS "States.id",
+//       s.name AS "States.name",
+//       s.abbreviation AS "States.abbreviation",
+//       s."createdAt" AS "States.createdAt",
+//       s."updatedAt" AS "States.updatedAt",
+
+//       -- ArticleEntityWhoCategorizedArticleContract fields
+//       aewcac.id AS "ArticleEntityWhoCategorizedArticleContract.id",
+//       aewcac."articleId" AS "ArticleEntityWhoCategorizedArticleContract.articleId",
+//       aewcac."entityWhoCategorizesId" AS "ArticleEntityWhoCategorizedArticleContract.entityWhoCategorizesId",
+//       aewcac."keyword" AS "ArticleEntityWhoCategorizedArticleContract.keyword",
+//       aewcac."keywordRating" AS "ArticleEntityWhoCategorizedArticleContract.keywordRating"
+
+//     FROM "Articles" a
+//     LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
+//     LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
+//     LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
+//     LEFT JOIN "States" s ON s.id = asc."stateId"
+
+//     LEFT JOIN "NewsApiRequests" nar ON nar.id = a."newsApiRequestId"
+//     LEFT JOIN "NewsArticleAggregatorSources" nas ON nas.id = nar."newsArticleAggregatorSourceId"
+
+//     LEFT JOIN "ArticleEntityWhoCategorizedArticleContracts" aewcac ON aewcac."articleId" = a.id
+
+//     ${whereClause}
+//     ORDER BY a.id;
+//   `;
+
+//   const rawResults = await sequelize.query(sql, {
+//     replacements,
+//     type: sequelize.QueryTypes.SELECT,
+//   });
+
+//   const articleMap = {};
+
+//   for (const row of rawResults) {
+//     const {
+//       id,
+//       createdAt,
+//       newsApiRequestId,
+//       title,
+//       description,
+//       publishedDate,
+//       url,
+//       isRelevant,
+//       approvalCreatedAt,
+//       publicationName,
+
+//       // NewsApiRequest
+//       "NewsApiRequest.id": narId,
+//       "NewsApiRequest.createdAt": narCreatedAt,
+//       "NewsApiRequest.andString": andString,
+//       "NewsApiRequest.orString": orString,
+//       "NewsApiRequest.notString": notString,
+
+//       // Aggregator
+//       "NewsApiRequest.NewsArticleAggregatorSource.id": nasId,
+//       "NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg": nasName,
+
+//       // State
+//       "States.id": stateId,
+//       "States.name": stateName,
+//       "States.abbreviation": stateAbbr,
+//       "States.createdAt": stateCreatedAt,
+//       "States.updatedAt": stateUpdatedAt,
+//     } = row;
+
+//     if (!articleMap[id]) {
+//       articleMap[id] = {
+//         id,
+//         createdAt,
+//         newsApiRequestId,
+//         title,
+//         description,
+//         publishedDate,
+//         url,
+//         publicationName,
+//         isRelevant,
+//         approvalCreatedAt,
+//         NewsApiRequest: {
+//           id: narId,
+//           createdAt: narCreatedAt,
+//           andString,
+//           orString,
+//           notString,
+//           NewsArticleAggregatorSource: {
+//             id: nasId,
+//             nameOfOrg: nasName,
+//           },
+//         },
+//         States: [],
+//         ArticleIsRelevants: [],
+//         ArticleApproveds: [],
+//         ArticleEntityWhoCategorizedArticleContracts: [],
+//       };
+//     }
+
+//     if (stateId && !articleMap[id].States.some((s) => s.id === stateId)) {
+//       articleMap[id].States.push({
+//         id: stateId,
+//         name: stateName,
+//         abbreviation: stateAbbr,
+//         createdAt: stateCreatedAt,
+//         updatedAt: stateUpdatedAt,
+//       });
+//     }
+//     if (
+//       !articleMap[id].ArticleIsRelevants.some(
+//         (ar) => ar.id === row["ArticleIsRelevant.id"]
+//       )
+//     ) {
+//       articleMap[id].ArticleIsRelevants.push({
+//         id: row["ArticleIsRelevant.id"],
+//         userId: row["ArticleIsRelevant.userId"],
+//         articleId: row["ArticleIsRelevant.articleId"],
+//         isRelevant: row["ArticleIsRelevant.isRelevant"],
+//       });
+//     }
+//     const approvedId = row["ArticleApproved.id"];
+//     if (
+//       approvedId !== null &&
+//       !articleMap[id].ArticleApproveds.some((aa) => aa.id === approvedId)
+//     ) {
+//       articleMap[id].ArticleApproveds.push({
+//         id: approvedId,
+//         userId: row["ArticleApproved.userId"],
+//         articleId: row["ArticleApproved.articleId"],
+//         isApproved: row["ArticleApproved.isApproved"],
+//       });
+//     }
+
+//     const entityWhoCategorizedArticleContractId =
+//       row["ArticleEntityWhoCategorizedArticleContract.id"];
+//     if (
+//       entityWhoCategorizedArticleContractId !== null &&
+//       !articleMap[id].ArticleEntityWhoCategorizedArticleContracts.some(
+//         (ewcac) => ewcac.id === entityWhoCategorizedArticleContractId
+//       )
+//     ) {
+//       articleMap[id].ArticleEntityWhoCategorizedArticleContracts.push({
+//         id: entityWhoCategorizedArticleContractId,
+//         articleId: row["ArticleEntityWhoCategorizedArticleContract.articleId"],
+//         entityWhoCategorizesId:
+//           row[
+//             "ArticleEntityWhoCategorizedArticleContract.entityWhoCategorizesId"
+//           ],
+//         keyword: row["ArticleEntityWhoCategorizedArticleContract.keyword"],
+//         keywordRating:
+//           row["ArticleEntityWhoCategorizedArticleContract.keywordRating"],
+//       });
+//     }
+//   }
+
+//   const results = Object.values(articleMap);
+//   return results;
+// }
+
+// async function sqlQueryArticlesForWithRatingsRouteNoAi(
 async function sqlQueryArticlesForWithRatingsRoute(
   returnOnlyThisCreatedAtDateOrAfter,
   returnOnlyThisPublishedDateOrAfter
@@ -451,10 +664,10 @@ async function sqlQueryArticlesForWithRatingsRoute(
       nas."nameOfOrg" AS "NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg",
 
       -- Review / Approval / Relevance
-      ar."isRelevant",
-      ar."userId" AS "ArticleIsRelevant.userId",
-      ar."articleId" AS "ArticleIsRelevant.articleId",
-      ar."isRelevant" AS "ArticleIsRelevant.isRelevant",
+      air."isRelevant",
+      air."userId" AS "ArticleIsRelevant.userId",
+      air."articleId" AS "ArticleIsRelevant.articleId",
+      air."isRelevant" AS "ArticleIsRelevant.isRelevant",
       aa.id AS "ArticleApproved.id",
       aa."userId" AS "ArticleApproved.userId",
       aa."articleId" AS "ArticleApproved.articleId",
@@ -466,15 +679,12 @@ async function sqlQueryArticlesForWithRatingsRoute(
       s."createdAt" AS "States.createdAt",
       s."updatedAt" AS "States.updatedAt",
 
-      -- ArticleEntityWhoCategorizedArticleContract fields
-      aewcac.id AS "ArticleEntityWhoCategorizedArticleContract.id",
-      aewcac."articleId" AS "ArticleEntityWhoCategorizedArticleContract.articleId",
-      aewcac."entityWhoCategorizesId" AS "ArticleEntityWhoCategorizedArticleContract.entityWhoCategorizesId",
-      aewcac."keyword" AS "ArticleEntityWhoCategorizedArticleContract.keyword",
-      aewcac."keywordRating" AS "ArticleEntityWhoCategorizedArticleContract.keywordRating"
+      ar.id AS "ArticleReviewed.id",
+      ar."userId" AS "ArticleReviewed.userId",
+      ar."articleId" AS "ArticleReviewed.articleId"
 
     FROM "Articles" a
-    LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
+    LEFT JOIN "ArticleIsRelevants" air ON air."articleId" = a.id
     LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
     LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
     LEFT JOIN "States" s ON s.id = asc."stateId"
@@ -482,8 +692,7 @@ async function sqlQueryArticlesForWithRatingsRoute(
     LEFT JOIN "NewsApiRequests" nar ON nar.id = a."newsApiRequestId"
     LEFT JOIN "NewsArticleAggregatorSources" nas ON nas.id = nar."newsArticleAggregatorSourceId"
 
-    LEFT JOIN "ArticleEntityWhoCategorizedArticleContracts" aewcac ON aewcac."articleId" = a.id
-
+    LEFT JOIN "ArticleRevieweds" ar ON ar."articleId" = a.id
     ${whereClause}
     ORDER BY a.id;
   `;
@@ -553,7 +762,7 @@ async function sqlQueryArticlesForWithRatingsRoute(
         States: [],
         ArticleIsRelevants: [],
         ArticleApproveds: [],
-        ArticleEntityWhoCategorizedArticleContracts: [],
+        ArticleRevieweds: [],
       };
     }
 
@@ -590,230 +799,17 @@ async function sqlQueryArticlesForWithRatingsRoute(
         isApproved: row["ArticleApproved.isApproved"],
       });
     }
-
-    const entityWhoCategorizedArticleContractId =
-      row["ArticleEntityWhoCategorizedArticleContract.id"];
+    const reviewedId = row["ArticleReviewed.id"];
     if (
-      entityWhoCategorizedArticleContractId !== null &&
-      !articleMap[id].ArticleEntityWhoCategorizedArticleContracts.some(
-        (ewcac) => ewcac.id === entityWhoCategorizedArticleContractId
-      )
+      reviewedId !== null &&
+      !articleMap[id].ArticleRevieweds.some((r) => r.id === reviewedId)
     ) {
-      articleMap[id].ArticleEntityWhoCategorizedArticleContracts.push({
-        id: entityWhoCategorizedArticleContractId,
-        articleId: row["ArticleEntityWhoCategorizedArticleContract.articleId"],
-        entityWhoCategorizesId:
-          row[
-            "ArticleEntityWhoCategorizedArticleContract.entityWhoCategorizesId"
-          ],
-        keyword: row["ArticleEntityWhoCategorizedArticleContract.keyword"],
-        keywordRating:
-          row["ArticleEntityWhoCategorizedArticleContract.keywordRating"],
+      articleMap[id].ArticleRevieweds.push({
+        id: reviewedId,
+        userId: row["ArticleReviewed.userId"],
+        articleId: row["ArticleReviewed.articleId"],
       });
     }
-  }
-
-  const results = Object.values(articleMap);
-  return results;
-}
-
-async function sqlQueryArticlesForWithRatingsRouteNoAi(
-  returnOnlyThisCreatedAtDateOrAfter,
-  returnOnlyThisPublishedDateOrAfter
-) {
-  const replacements = {};
-  const whereClauses = [];
-
-  if (returnOnlyThisCreatedAtDateOrAfter) {
-    whereClauses.push(`a."createdAt" >= :returnOnlyThisCreatedAtDateOrAfter`);
-    replacements.returnOnlyThisCreatedAtDateOrAfter =
-      returnOnlyThisCreatedAtDateOrAfter;
-  }
-
-  if (returnOnlyThisPublishedDateOrAfter) {
-    whereClauses.push(
-      `a."publishedDate" >= :returnOnlyThisPublishedDateOrAfter`
-    );
-    replacements.returnOnlyThisPublishedDateOrAfter =
-      returnOnlyThisPublishedDateOrAfter;
-  }
-
-  const whereClause =
-    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
-  const sql = `
-    SELECT
-      a.id,
-      a."createdAt",
-      a."newsApiRequestId",
-      a."title",
-      a."description",
-      a."publishedDate",
-      a."publicationName",
-      a."url",
-
-      -- NewsApiRequest fields
-      nar."andString" AS "NewsApiRequest.andString",
-      nar."orString" AS "NewsApiRequest.orString",
-      nar."notString" AS "NewsApiRequest.notString",
-      nar.id AS "NewsApiRequest.id",
-      nar."createdAt" AS "NewsApiRequest.createdAt",
-
-      -- NewsArticleAggregatorSource fields
-      nas.id AS "NewsApiRequest.NewsArticleAggregatorSource.id",
-      nas."nameOfOrg" AS "NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg",
-
-      -- Review / Approval / Relevance
-      ar."isRelevant",
-      ar."userId" AS "ArticleIsRelevant.userId",
-      ar."articleId" AS "ArticleIsRelevant.articleId",
-      ar."isRelevant" AS "ArticleIsRelevant.isRelevant",
-      aa.id AS "ArticleApproved.id",
-      aa."userId" AS "ArticleApproved.userId",
-      aa."articleId" AS "ArticleApproved.articleId",
-      aa."isApproved" AS "ArticleApproved.isApproved",
-      s.id AS "stateId",
-      s.id AS "States.id",
-      s.name AS "States.name",
-      s.abbreviation AS "States.abbreviation",
-      s."createdAt" AS "States.createdAt",
-      s."updatedAt" AS "States.updatedAt"
-
-
-    FROM "Articles" a
-    LEFT JOIN "ArticleIsRelevants" ar ON ar."articleId" = a.id
-    LEFT JOIN "ArticleApproveds" aa ON aa."articleId" = a.id
-    LEFT JOIN "ArticleStateContracts" asc ON asc."articleId" = a.id
-    LEFT JOIN "States" s ON s.id = asc."stateId"
-
-    LEFT JOIN "NewsApiRequests" nar ON nar.id = a."newsApiRequestId"
-    LEFT JOIN "NewsArticleAggregatorSources" nas ON nas.id = nar."newsArticleAggregatorSourceId"
-
-    ${whereClause}
-    ORDER BY a.id;
-  `;
-
-  const rawResults = await sequelize.query(sql, {
-    replacements,
-    type: sequelize.QueryTypes.SELECT,
-  });
-
-  const articleMap = {};
-
-  for (const row of rawResults) {
-    const {
-      id,
-      createdAt,
-      newsApiRequestId,
-      title,
-      description,
-      publishedDate,
-      url,
-      isRelevant,
-      approvalCreatedAt,
-      publicationName,
-
-      // NewsApiRequest
-      "NewsApiRequest.id": narId,
-      "NewsApiRequest.createdAt": narCreatedAt,
-      "NewsApiRequest.andString": andString,
-      "NewsApiRequest.orString": orString,
-      "NewsApiRequest.notString": notString,
-
-      // Aggregator
-      "NewsApiRequest.NewsArticleAggregatorSource.id": nasId,
-      "NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg": nasName,
-
-      // State
-      "States.id": stateId,
-      "States.name": stateName,
-      "States.abbreviation": stateAbbr,
-      "States.createdAt": stateCreatedAt,
-      "States.updatedAt": stateUpdatedAt,
-    } = row;
-
-    if (!articleMap[id]) {
-      articleMap[id] = {
-        id,
-        createdAt,
-        newsApiRequestId,
-        title,
-        description,
-        publishedDate,
-        url,
-        publicationName,
-        isRelevant,
-        approvalCreatedAt,
-        NewsApiRequest: {
-          id: narId,
-          createdAt: narCreatedAt,
-          andString,
-          orString,
-          notString,
-          NewsArticleAggregatorSource: {
-            id: nasId,
-            nameOfOrg: nasName,
-          },
-        },
-        States: [],
-        ArticleIsRelevants: [],
-        ArticleApproveds: [],
-      };
-    }
-
-    if (stateId && !articleMap[id].States.some((s) => s.id === stateId)) {
-      articleMap[id].States.push({
-        id: stateId,
-        name: stateName,
-        abbreviation: stateAbbr,
-        createdAt: stateCreatedAt,
-        updatedAt: stateUpdatedAt,
-      });
-    }
-    if (
-      !articleMap[id].ArticleIsRelevants.some(
-        (ar) => ar.id === row["ArticleIsRelevant.id"]
-      )
-    ) {
-      articleMap[id].ArticleIsRelevants.push({
-        id: row["ArticleIsRelevant.id"],
-        userId: row["ArticleIsRelevant.userId"],
-        articleId: row["ArticleIsRelevant.articleId"],
-        isRelevant: row["ArticleIsRelevant.isRelevant"],
-      });
-    }
-    const approvedId = row["ArticleApproved.id"];
-    if (
-      approvedId !== null &&
-      !articleMap[id].ArticleApproveds.some((aa) => aa.id === approvedId)
-    ) {
-      articleMap[id].ArticleApproveds.push({
-        id: approvedId,
-        userId: row["ArticleApproved.userId"],
-        articleId: row["ArticleApproved.articleId"],
-        isApproved: row["ArticleApproved.isApproved"],
-      });
-    }
-
-    // const entityWhoCategorizedArticleContractId =
-    //   row["ArticleEntityWhoCategorizedArticleContract.id"];
-    // if (
-    //   entityWhoCategorizedArticleContractId !== null &&
-    //   !articleMap[id].ArticleEntityWhoCategorizedArticleContracts.some(
-    //     (ewcac) => ewcac.id === entityWhoCategorizedArticleContractId
-    //   )
-    // ) {
-    //   articleMap[id].ArticleEntityWhoCategorizedArticleContracts.push({
-    //     id: entityWhoCategorizedArticleContractId,
-    //     articleId: row["ArticleEntityWhoCategorizedArticleContract.articleId"],
-    //     entityWhoCategorizesId:
-    //       row[
-    //         "ArticleEntityWhoCategorizedArticleContract.entityWhoCategorizesId"
-    //       ],
-    //     keyword: row["ArticleEntityWhoCategorizedArticleContract.keyword"],
-    //     keywordRating:
-    //       row["ArticleEntityWhoCategorizedArticleContract.keywordRating"],
-    //   });
-    // }
   }
 
   const results = Object.values(articleMap);
@@ -917,6 +913,6 @@ module.exports = {
   sqlQueryArticlesWithStates,
   sqlQueryArticlesReport,
   sqlQueryArticlesIsRelevant,
-  sqlQueryArticlesForWithRatingsRouteNoAi,
+  // sqlQueryArticlesForWithRatingsRouteNoAi,
   sqlQueryArticlesAndAiScores,
 };

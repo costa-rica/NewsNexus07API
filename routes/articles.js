@@ -42,7 +42,7 @@ const {
   sqlQueryArticlesApproved,
   sqlQueryArticlesReport,
   sqlQueryArticlesIsRelevant,
-  sqlQueryArticlesForWithRatingsRouteNoAi,
+  // sqlQueryArticlesForWithRatingsRouteNoAi,
   sqlQueryArticlesAndAiScores,
 } = require("../modules/queriesSql");
 
@@ -609,7 +609,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
   //   returnOnlyThisCreatedAtDateOrAfter,
   //   returnOnlyThisPublishedDateOrAfter
   // );
-  const articlesArray = await sqlQueryArticlesForWithRatingsRouteNoAi(
+  const articlesArray = await sqlQueryArticlesForWithRatingsRoute(
     returnOnlyThisCreatedAtDateOrAfter,
     returnOnlyThisPublishedDateOrAfter
   );
@@ -642,9 +642,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
     where: { name: semanticScorerEntityName },
     include: [EntityWhoCategorizedArticle],
   });
-  // if (!artificialIntelligenceObject) {
-  //   return res.status(404).json({ message: "AI not found." });
-  // }
+  if (!artificialIntelligenceObject) {
+    return res.status(404).json({ message: "AI not found." });
+  }
   const entityWhoCategorizedArticleId =
     artificialIntelligenceObject.EntityWhoCategorizedArticles[0].id;
 
@@ -710,9 +710,9 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
           article.NewsApiRequest.NewsArticleAggregatorSource.nameOfOrg;
       }
 
-      if (article.id === 42) {
-        console.log(JSON.stringify(article, null, 2));
-      }
+      // if (article.id === 42) {
+      //   console.log(JSON.stringify(article, null, 2));
+      // }
 
       const isBeingReviewed = article.ArticleRevieweds?.length > 0;
 
@@ -737,10 +737,7 @@ router.post("/with-ratings", authenticateToken, async (req, res) => {
       };
     }
   );
-  console.log("----------------------");
-  console.log("---- Route finished ----");
-  console.log("----------------------");
-  // // console.log("counter: ", counter);
+
   const timeToRenderResponseFromApiInSeconds = (Date.now() - startTime) / 1000;
   console.log(
     `timeToRenderResponseFromApiInSeconds: ${timeToRenderResponseFromApiInSeconds}`
