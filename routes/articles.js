@@ -231,10 +231,19 @@ router.get("/approved", authenticateToken, async (req, res) => {
     const articleHasBeenAcceptedByAll = article.ArticleReportContracts.every(
       (contract) => contract.articleAcceptedByCpsc === 1
     );
+    let stateAbbreviation = "";
+    if (article.States?.length === 1) {
+      stateAbbreviation = article.States[0].abbreviation;
+    } else if (article.States?.length > 1) {
+      stateAbbreviation = article.States.map(
+        (state) => state.abbreviation
+      ).join(", ");
+    }
     return {
       ...article,
       isSubmitted,
       articleHasBeenAcceptedByAll,
+      stateAbbreviation,
     };
   });
 
