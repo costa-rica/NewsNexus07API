@@ -357,29 +357,42 @@ router.get("/get-approved/:articleId", authenticateToken, async (req, res) => {
 router.post("/approve/:articleId", authenticateToken, async (req, res) => {
   const { articleId } = req.params;
   const {
-    isApproved,
+    // isApproved,
     headlineForPdfReport,
-    // publicationNameForPdfReport,
-    // publicationDateForPdfReport,
-    // textForPdfReport,
-    // urlForPdfReport,
-    // kmNotes,
+    approvedStatus,
   } = req.body;
   const user = req.user;
 
   console.log(`articleId ${articleId}: ${headlineForPdfReport}`);
+  console.log(`approvedStatus: ${approvedStatus}`);
 
-  if (isApproved) {
+  const articleApprovedExists = await ArticleApproved.findOne({
+    where: { articleId },
+  });
+
+  if (approvedStatus === "Approve" && !articleApprovedExists) {
     await ArticleApproved.create({
       articleId: articleId,
       userId: user.id,
       ...req.body,
     });
-  } else {
+  } else if (approvedStatus === "Un-approve") {
+    console.log("---- > recieved Un-approve");
     await ArticleApproved.destroy({
       where: { articleId },
     });
   }
+  // if (isApproved) {
+  //   await ArticleApproved.create({
+  //     articleId: articleId,
+  //     userId: user.id,
+  //     ...req.body,
+  //   });
+  // } else {
+  //   await ArticleApproved.destroy({
+  //     where: { articleId },
+  //   });
+  // }
 
   res.json({ result: true, status: `articleId ${articleId} is approved` });
 });
